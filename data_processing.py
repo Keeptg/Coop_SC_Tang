@@ -1,15 +1,14 @@
 # This is a sample Python script.
 
 import os
-import sys
-import glob
 import mat73
 from scipy.io import loadmat
 import numpy as np
 import pandas as pd
 import xarray as xr
-
 import salem
+
+from path_config import *
 
 
 def write_mat2nc(mat_tuple, varname, years, units=None, y0=None):
@@ -79,11 +78,11 @@ def write_mat2nc(mat_tuple, varname, years, units=None, y0=None):
     return mons_data
 
 
-def write_climate2nc(years, **kwargs):
+def write_climate2nc(years, file_name, **kwargs):
 
     for mtype in ['1', '2']:
         for etype in ['sce', 'ctl']:
-            climate_path = os.path.join(data_dir, f'Climate{mtype}.mat')
+            climate_path = os.path.join(data_dir, file_name)
             data = mat73.loadmat(climate_path)
             prec_ds = write_mat2nc(data, f'PrecipMean_{etype}', years, **kwargs)
             temp_ds = write_mat2nc(data, f'T2mMean_{etype}', years, **kwargs)
@@ -91,24 +90,23 @@ def write_climate2nc(years, **kwargs):
             temp_ds.to_netcdf(os.path.join(data_dir, f'temp{years}_{etype}_ds{mtype}.nc'))
 
 
-def write_climate_diff2nc(prcp_units=None, temp_units=None):
+def write_climate_diff2nc(file_name, var_name, prcp_units=None, temp_units=None, suffix=''):
+    """Write *.mat climate file to *.nc file
+    Parameters
+    ------
+    file_name : str: the name of target file, should be ended with '.mat'
 
-    for mtype in ['_diff1', '_diff2']:
-            climate_path = os.path.join(data_dir, f'Climate{mtype}.mat')
-            data = mat73.loadmat(climate_path)
-            prec_ds = write_mat2nc(data, 'Precip_diff', 1, units=prcp_units)
-            temp_ds = write_mat2nc(data, 'T2m_diff', 1, units=temp_units)
-            prec_ds.to_netcdf(os.path.join(data_dir, f'prec{mtype}.nc'))
-            temp_ds.to_netcdf(os.path.join(data_dir, f'temp{mtype}.nc'))
+    """
+
+    if suffix:
+        suffix = '_' + suffix
+    climate_path = os.path.join(data_dir, file_name)
+    data = mat73.loadmat(climate_path)
+    var_ds = write_mat2nc(data, var_name, 1, units=prcp_units)
+    var_ds.to_netcdf(os.path.join(data_dir, f'prec{suffix}.nc'))
 
 
-def main():
-    global root_dir, data_dir
-    root_dir = '/home/keeptg/Data/Study_in_Innsbruck/Pro_piao'
-    data_dir = os.path.join(root_dir, 'Data')
-    script_dir = os.path.join(root_dir, 'Script')
-
-    write_climate_diff2nc(prcp_units='mm')
-
-if __name__ == "__main__":
-    main()
+write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_sce_ctl', suffix='prcp_diff_sce_3')
+write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_sce_ctl', suffix='temp_diff_sec_ctl_3')
+write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_scenew_ctl', suffix='prcp_diff_secnew_ctl_3')
+write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_scenew_ctl', suffix='temp_diff_secnew_ctl_3')
