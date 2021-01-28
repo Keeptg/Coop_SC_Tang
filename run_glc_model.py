@@ -7,6 +7,7 @@ import pandas as pd
 import geopandas as gpd
 import xarray as xr
 from oggm import utils, tasks, cfg, workflow
+from oggm.core import gis
 from oggm.core.flowline import *
 from oggm.core.massbalance import *
 from oggm.core import gcm_climate
@@ -528,9 +529,11 @@ cfg.PARAMS['continue_on_error'] = True
 # workflow.climate_tasks(gdirs)
 # workflow.inversion_tasks(gdirs)
 # workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
-gdirs = workflow.init_glacier_directories(rgidf)
+gdirs = workflow.init_glacier_directories(rgidf, from_perpro_level=1)
+for gdir in gdirs:
+    gis.process_dem(gdir)
 task_list = [
-    tasks.define_glacier_region,
+#    tasks.define_glacier_region,
     tasks.glacier_masks,
     tasks.compute_centerlines,
     tasks.initialize_flowlines,
