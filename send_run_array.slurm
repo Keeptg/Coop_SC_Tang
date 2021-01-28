@@ -21,7 +21,7 @@ mkdir -p "$WORKDIR"
 echo "Workdir for this run: $WORKDIR"
 
 # Export the WORKDIR as environment variable so our script can use it to find its working directory.
-export WORKDIR
+export WORKDIR TASK_ID
 
 # Use the local data download cache
 export OGGM_DOWNLOAD_CACHE=/home/data/download
