@@ -502,97 +502,123 @@ def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None, nyea
                             **kwargs)
 
 
-#global root_dir, data_dir
-# outpath = utils.mkdir(os.path.join(root_dir, 'cluster_output', 'Climate_3'))
-outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
-path10 = utils.get_rgi_region_file('10', '61')
-path13 = utils.get_rgi_region_file('13', '61')
-path14 = utils.get_rgi_region_file('14', '61')
-path15 = utils.get_rgi_region_file('15', '61')
-rgidf10 = gpd.read_file(path10)
-rgidf10 = rgidf10[rgidf10.O2Region == '4']
-rgidf13 = gpd.read_file(path13)
-rgidf14 = gpd.read_file(path14)
-rgidf15 = gpd.read_file(path15)
-rgidf = pd.concat([rgidf10, rgidf13, rgidf14, rgidf15])
-run_for_test = False
-if (not run_in_cluster) or run_for_test:
-    rgidf = rgidf10.iloc[0:5, :]
-cfg.initialize()
-cfg.PARAMS['border'] = 80
-cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
-cfg.PARAMS['continue_on_error'] = True
+def pre_process_tasks(run_for_test=False):
 
-# gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
-#                                           reset=True, force=True)
-# workflow.gis_prepro_tasks(gdirs)
-# workflow.climate_tasks(gdirs)
-# workflow.inversion_tasks(gdirs)
-# workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
-gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1)
-for gdir in gdirs:
-    gis.process_dem(gdir)
-task_list = [
-#    tasks.define_glacier_region,
-    tasks.glacier_masks,
-    tasks.compute_centerlines,
-    tasks.initialize_flowlines,
-    tasks.compute_downstream_line,
-    tasks.compute_downstream_bedshape, 
-    tasks.catchment_area,
-    tasks.catchment_intersections,
-    tasks.catchment_width_geom,
-    tasks.catchment_width_correction,
-    tasks.process_cru_data,
-    tasks.local_t_star,
-    tasks.mu_star_calibration,
-    tasks.prepare_for_inversion,
-    tasks.mass_conservation_inversion,
-    tasks.filter_inversion_output, 
-    tasks.init_present_time_glacier
-]
-for task in task_list:
-    workflow.execute_entity_task(task, gdirs)
+    path10 = utils.get_rgi_region_file('10', '61')
+    path13 = utils.get_rgi_region_file('13', '61')
+    path14 = utils.get_rgi_region_file('14', '61')
+    path15 = utils.get_rgi_region_file('15', '61')
+    rgidf10 = gpd.read_file(path10)
+    rgidf10 = rgidf10[rgidf10.O2Region == '4']
+    rgidf13 = gpd.read_file(path13)
+    rgidf14 = gpd.read_file(path14)
+    rgidf15 = gpd.read_file(path15)
+    rgidf = pd.concat([rgidf10, rgidf13, rgidf14, rgidf15])
+    if (not run_in_cluster) or run_for_test:
+        rgidf = rgidf10.iloc[0:5, :]
+    cfg.initialize()
+    cfg.PARAMS['border'] = 80
+    cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
+    cfg.PARAMS['continue_on_error'] = True
 
+    # gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
+    #                                           reset=True, force=True)
+    # workflow.gis_prepro_tasks(gdirs)
+    # workflow.climate_tasks(gdirs)
+    # workflow.inversion_tasks(gdirs)
+    # workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
+    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1)
+    for gdir in gdirs:
+        gis.process_dem(gdir)
+    task_list = [
+    #    tasks.define_glacier_region,
+        tasks.glacier_masks,
+        tasks.compute_centerlines,
+        tasks.initialize_flowlines,
+        tasks.compute_downstream_line,
+        tasks.compute_downstream_bedshape, 
+        tasks.catchment_area,
+        tasks.catchment_intersections,
+        tasks.catchment_width_geom,
+        tasks.catchment_width_correction,
+        tasks.process_cru_data,
+        tasks.local_t_star,
+        tasks.mu_star_calibration,
+        tasks.prepare_for_inversion,
+        tasks.mass_conservation_inversion,
+        tasks.filter_inversion_output, 
+        tasks.init_present_time_glacier
+    ]
+    for task in task_list:
+        workflow.execute_entity_task(task, gdirs)
+
+    return gdirs
+
+
+def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefix=None, run_for_test=False):
+
+    y0 = 2000
+    nyears = 1000
+    halfsize = 0
+    outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
+    gdirs = pre_process_tasks(run_for_test=run_for_test)
+    if mtype == 'origin':
+        suffix = f'_origin_hf{halfsize}'
+        workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
+                                    output_filesuffix=f'_origin_hf{halfsize}')
+    else:
+        suffix = f'_exper_{mtype}_hf{halfsize}'
+        fpath_prcp_diff = os.path.join(data_dir, f'{prcp_prefix}_{mtype}.nc')
+        fpath_temp_diff = os.path.join(data_dir, f'{temp_prefix}_{mtype}.nc')
+        workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
+                                    output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
+                                    fpath_temp_diff=fpath_temp_diff,
+                                    fpath_prcp_diff=fpath_prcp_diff)
+
+    utils.compile_run_output(gdirs, input_filesuffix=suffix, 
+                             path=os.path.join(outpath, 'result'+suffix+'.nc'))
+
+
+def single_node_example(run_for_test=False):
+    y0 = 2000
+    nyears = 2000
+    halfsize = 15
+    mtypes = ['scenew_ctl_3', 'sce_ctl_3']
+    outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
+    gdirs = pre_process_tasks(run_for_test=run_for_test)
+    workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
+                                output_filesuffix=f'_origin_hf{halfsize}')
+    for mtype in mtypes:
+        fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
+        fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
+        workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
+                                    output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
+                                    fpath_temp_diff=fpath_temp_diff,
+                                    fpath_prcp_diff=fpath_prcp_diff)
+
+    output_list = []
+    suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}', f'_exper_{mtypes[1]}_hf{halfsize}']
+    for suffix in suffixes:
+        output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
+                                                    path=os.path.join(outpath, 'result'+suffix+'.nc')))
+
+
+mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
+prcp_perfix = 'Precip_diff'
+temp_prefix = 'T2m_diff'
+run_for_test = True
 y0 = 2000
-nyears = 2000
+nyears = 1000
 halfsize = 0
-mtypes = ['scenew_ctl_3', 'sce_ctl_3']
-workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                             output_filesuffix=f'_origin_hf{halfsize}')
-for mtype in mtypes:
-    fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
-    fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
-    workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                 output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
-                                 fpath_temp_diff=fpath_temp_diff,
-                                 fpath_prcp_diff=fpath_prcp_diff)
+args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], run_for_test=run_for_test)
+args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], prcp_perfix=prcp_perfix, 
+             temp_prefix=temp_prefix, run_for_test=run_for_test)
+args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], prcp_perfix=prcp_perfix, 
+             temp_prefix=temp_prefix, run_for_test=run_for_test)
+args_list = [args0, args1, args2]
 
-output_list = []
-suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}', f'_exper_{mtypes[1]}_hf{halfsize}']
-for suffix in suffixes:
-    output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
-                                                path=os.path.join(outpath, 'result'+suffix+'.nc')))
-
-y0 = 2000
-nyears = 2000
-halfsize = 15
-workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                             output_filesuffix=f'_origin_hf{halfsize}')
-for mtype in mtypes:
-    fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
-    fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
-    workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                 output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
-                                 fpath_temp_diff=fpath_temp_diff,
-                                 fpath_prcp_diff=fpath_prcp_diff)
-
-output_list = []
-suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}', f'_exper_{mtypes[1]}_hf{halfsize}']
-for suffix in suffixes:
-    output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
-                                                path=os.path.join(outpath, 'result'+suffix+'.nc')))
-
+task_num = int(os.environ.get(['TASK_ID']))
+run_with_job_array(**args_list[task_num])
 #import matplotlib.pyplot as plt
 #fig, ax = plt.subplots(1, 3)
 #ylabels = ['Volume (km3)', 'Area (km2)', 'ELA (m)']
