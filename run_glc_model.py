@@ -575,7 +575,7 @@ nyears = 2000
 halfsize = 15
 workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
                              output_filesuffix=f'_origin_hf{halfsize}')
-for mtype in ['secnew_ctl_3', 'sec_ctl_3']:
+for mtype in mtypes:
     fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
     fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
     workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
