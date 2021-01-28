@@ -521,41 +521,42 @@ cfg.initialize()
 cfg.PARAMS['border'] = 80
 cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
 
-# gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
-#                                           reset=True, force=True)
-# workflow.gis_prepro_tasks(gdirs)
-# workflow.climate_tasks(gdirs)
-# workflow.inversion_tasks(gdirs)
-# workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
-gdirs = workflow.init_glacier_directories(rgidf)
-task_list = [
-    tasks.define_glacier_region,
-    tasks.glacier_masks,
-    tasks.compute_centerlines,
-    tasks.initialize_flowlines,
-    tasks.compute_downstream_line,
-    tasks.compute_downstream_bedshape, 
-    tasks.catchment_area,
-    tasks.catchment_intersections,
-    tasks.catchment_width_geom,
-    tasks.catchment_width_correction,
-    tasks.process_cru_data,
-    tasks.local_t_star,
-    tasks.mu_star_calibration,
-    tasks.prepare_for_inversion,
-    tasks.mass_conservation_inversion,
-    tasks.filter_inversion_output, 
-    tasks.init_present_time_glacier
-]
-for task in task_list:
-    workflow.execute_entity_task(task, gdirs)
+gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
+                                          reset=True, force=True)
+workflow.gis_prepro_tasks(gdirs)
+workflow.climate_tasks(gdirs)
+workflow.inversion_tasks(gdirs)
+workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
+# gdirs = workflow.init_glacier_directories(rgidf)
+# task_list = [
+#     tasks.define_glacier_region,
+#     tasks.glacier_masks,
+#     tasks.compute_centerlines,
+#     tasks.initialize_flowlines,
+#     tasks.compute_downstream_line,
+#     tasks.compute_downstream_bedshape, 
+#     tasks.catchment_area,
+#     tasks.catchment_intersections,
+#     tasks.catchment_width_geom,
+#     tasks.catchment_width_correction,
+#     tasks.process_cru_data,
+#     tasks.local_t_star,
+#     tasks.mu_star_calibration,
+#     tasks.prepare_for_inversion,
+#     tasks.mass_conservation_inversion,
+#     tasks.filter_inversion_output, 
+#     tasks.init_present_time_glacier
+# ]
+# for task in task_list:
+#     workflow.execute_entity_task(task, gdirs)
 
 y0 = 2000
 nyears = 2000
 halfsize = 0
+mtypes = ['scenew_ctl_3', 'sce_ctl_3']
 workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
                              output_filesuffix=f'_origin_hf{halfsize}')
-for mtype in ['scenew_ctl_3', 'sce_ctl_3']:
+for mtype in mtypes:
     fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
     fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
     workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
@@ -564,7 +565,7 @@ for mtype in ['scenew_ctl_3', 'sce_ctl_3']:
                                  fpath_prcp_diff=fpath_prcp_diff)
 
 output_list = []
-suffixes = [f'_origin_hf{halfsize}', f'_exper1_hf{halfsize}', f'_exper2_hf{halfsize}']
+suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}', f'_exper_{mtypes[1]}_hf{halfsize}']
 for suffix in suffixes:
     output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
                                                 path=os.path.join(outpath, 'result'+suffix+'.nc')))
@@ -583,7 +584,7 @@ for mtype in ['secnew_ctl_3', 'sec_ctl_3']:
                                  fpath_prcp_diff=fpath_prcp_diff)
 
 output_list = []
-suffixes = [f'_origin_hf{halfsize}', f'_exper1_hf{halfsize}', f'_exper2_hf{halfsize}']
+suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}', f'_exper_{mtypes[1]}_hf{halfsize}']
 for suffix in suffixes:
     output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
                                                 path=os.path.join(outpath, 'result'+suffix+'.nc')))
