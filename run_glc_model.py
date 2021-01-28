@@ -604,16 +604,16 @@ def single_node_example(run_for_test=False):
 
 
 mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
-prcp_perfix = 'Precip_diff'
+prcp_prefix = 'Precip_diff'
 temp_prefix = 'T2m_diff'
 run_for_test = True
 y0 = 2000
 nyears = 1000
 halfsize = 0
 args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], run_for_test=run_for_test)
-args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], prcp_perfix=prcp_perfix, 
+args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], prcp_prefix=prcp_prefix, 
              temp_prefix=temp_prefix, run_for_test=run_for_test)
-args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], prcp_perfix=prcp_perfix, 
+args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], prcp_prefix=prcp_prefix, 
              temp_prefix=temp_prefix, run_for_test=run_for_test)
 args_list = [args0, args1, args2]
 
