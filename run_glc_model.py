@@ -520,32 +520,34 @@ cfg.initialize()
 cfg.PARAMS['border'] = 80
 cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
 
-gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
-                                          reset=True, force=True)
-# gdirs = workflow.init_glacier_directories(rgidf)
-# task_list = [
-#     tasks.define_glacier_region,
-#     tasks.glacier_masks,
-#     tasks.compute_centerlines,
-#     tasks.initialize_flowlines,
-#     tasks.compute_downstream_line,
-#     tasks.compute_downstream_bedshape, 
-#     tasks.catchment_area,
-#     tasks.catchment_intersections,
-#     tasks.catchment_width_geom,
-#     tasks.catchment_width_correction,
-#     tasks.process_cru_data,
-#     tasks.local_t_star,
-#     tasks.mu_star_calibration,
-#     tasks.prepare_for_inversion,
-#     tasks.mass_conservation_inversion,
-#     tasks.filter_inversion_output, 
-#     tasks.init_present_time_glacier
-# ]
+# gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
+#                                           reset=True, force=True)
 # workflow.gis_prepro_tasks(gdirs)
 # workflow.climate_tasks(gdirs)
 # workflow.inversion_tasks(gdirs)
-workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
+# workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
+gdirs = workflow.init_glacier_directories(rgidf)
+task_list = [
+    tasks.define_glacier_region,
+    tasks.glacier_masks,
+    tasks.compute_centerlines,
+    tasks.initialize_flowlines,
+    tasks.compute_downstream_line,
+    tasks.compute_downstream_bedshape, 
+    tasks.catchment_area,
+    tasks.catchment_intersections,
+    tasks.catchment_width_geom,
+    tasks.catchment_width_correction,
+    tasks.process_cru_data,
+    tasks.local_t_star,
+    tasks.mu_star_calibration,
+    tasks.prepare_for_inversion,
+    tasks.mass_conservation_inversion,
+    tasks.filter_inversion_output, 
+    tasks.init_present_time_glacier
+]
+for task in task_list:
+    workflow.execute_entity_task(task, gdirs)
 
 y0 = 2000
 nyears = 2000
