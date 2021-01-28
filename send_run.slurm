@@ -43,7 +43,7 @@ srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec docker://oggm/oggm:20
   pip install --upgrade "git+https://github.com/OGGM/oggm.git"
   #pip install --upgrade "git+https://github.com/OGGM/oggm.git@af0ac438be77a0f86ae2e33538c894c8a34061db"
   # Finally, the run
-  python3 ./data_processing.py
+  python3 ./run_glc_model.py
 EOF
 
 #echo "Copying files..."
