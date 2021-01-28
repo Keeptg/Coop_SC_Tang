@@ -42,7 +42,7 @@ srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec /home/users/lifei/ima
   pip install mat73
   # OPTIONAL: install another OGGM version
   # pip install --upgrade "git+https://github.com/OGGM/oggm.git"
-  pip install --upgrade "git+https://github.com/OGGM/oggm.git@c05d3307907444c3aa6bcf631e474c58208bc7cc"
+  pip install --upgrade "git+https://github.com/OGGM/oggm.git@2fbe179521a9ef97e4d6dbcec0c105dbbf279bc3"
   #pip install --upgrade "git+https://github.com/OGGM/oggm.git@af0ac438be77a0f86ae2e33538c894c8a34061db"
   # Finally, the run
   python3 ./run_glc_model.py
