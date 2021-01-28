@@ -502,7 +502,7 @@ def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None, nyea
 
 
 #global root_dir, data_dir
-outpath = utils.mkdir(os.path.join(cluster_output, 'Climate_3'))
+outpath = utils.mkdir(os.path.join(root_dir, 'cluster_output', 'Climate_3'))
 # outpath = utils.mkdir(os.path.join(working_dir, 'Climate_3'))
 path10 = utils.get_rgi_region_file('10', '61')
 path13 = utils.get_rgi_region_file('13', '61')
