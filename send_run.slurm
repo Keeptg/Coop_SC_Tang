@@ -14,6 +14,7 @@ set -e
 # /work/username exists and is writable by the jobs user.
 # We create a sub-directory there for this job to store its runtime data at.
 WORKDIR="/work/$SLURM_JOB_USER/$SLURM_JOB_ID/my_run"
+OUTDIR="work/$SLURM_JOB_USER/$SLURM_JOB_ID/my_run/Climate_3"
 mkdir -p "$WORKDIR"
 echo "Workdir for this run: $WORKDIR"
 
@@ -44,8 +45,10 @@ srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec /home/users/lifei/ima
   #pip install --upgrade "git+https://github.com/OGGM/oggm.git@af0ac438be77a0f86ae2e33538c894c8a34061db"
   # Finally, the run
   python3 ./run_glc_model.py
-EOF
 
+EOF
+echo "Copying files..."
+rsync -avzh "$OUTDIR" /home/lifei/www/run_output/Pro_piao/Climate_3
 #echo "Copying files..."
 #cp -R "$WORKDIR" /home/users/lifei/my_run_output/ 
 
