@@ -520,6 +520,7 @@ if (not run_in_cluster) or run_for_test:
 cfg.initialize()
 cfg.PARAMS['border'] = 80
 cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
+cfg.PARAMS['continue_on_error'] = True
 
 # gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
 #                                           reset=True, force=True)
