@@ -527,7 +527,7 @@ def pre_process_tasks(run_for_test=False):
     # workflow.climate_tasks(gdirs)
     # workflow.inversion_tasks(gdirs)
     # workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
-    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1)
+    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=2)
     for gdir in gdirs:
         gis.process_dem(gdir)
     task_list = [
@@ -606,7 +606,7 @@ def single_node_example(run_for_test=False):
 mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
 prcp_prefix = 'Precip_diff'
 temp_prefix = 'T2m_diff'
-run_for_test = True
+run_for_test = False
 y0 = 2000
 nyears = 1000
 halfsize = 0
