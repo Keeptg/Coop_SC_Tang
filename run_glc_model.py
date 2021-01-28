@@ -529,7 +529,7 @@ cfg.PARAMS['continue_on_error'] = True
 # workflow.climate_tasks(gdirs)
 # workflow.inversion_tasks(gdirs)
 # workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
-gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1)
+gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=2)
 for gdir in gdirs:
     gis.process_dem(gdir)
 task_list = [
