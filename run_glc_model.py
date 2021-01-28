@@ -522,6 +522,10 @@ cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
 
 gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
                                           reset=True, force=True)
+workflow.gis_prepro_tasks(gdirs)
+workflow.climate_tasks(gdirs)
+workflow.inversion_tasks(gdirs)
+
 y0 = 2000
 nyears = 2000
 halfsize = 0
