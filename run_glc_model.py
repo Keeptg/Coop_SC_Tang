@@ -11,6 +11,7 @@ from oggm.core.flowline import *
 from oggm.core.massbalance import *
 from oggm.core import gcm_climate
 import geopandas as gpd
+from path_config import *
 
 
 log = logging.getLogger(__name__)
@@ -500,9 +501,8 @@ def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None, nyea
                             **kwargs)
 
 
-root_dir = '/home/keeptg/Data/Study_in_Innsbruck/Pro_piao'
-data_dir = os.path.join(root_dir, 'Data')
-outpath = os.path.join(root_dir, 'model_output')
+#global root_dir, data_dir
+outpath = utils.mkdir(os.path.join(cluster_output, 'Climate_3'))
 path10 = utils.get_rgi_region_file('10', '61')
 path13 = utils.get_rgi_region_file('13', '61')
 path14 = utils.get_rgi_region_file('14', '61')
@@ -513,105 +513,63 @@ rgidf13 = gpd.read_file(path13)
 rgidf14 = gpd.read_file(path14)
 rgidf15 = gpd.read_file(path15)
 rgidf = pd.concat([rgidf10, rgidf13, rgidf14, rgidf15])
-dup_df = rgidf.duplicated(subset='RGIId')
-rgidf10.sort_values(by='Area', ascending=False, inplace=True)
-rgidf = rgidf10.iloc[0:5, :]
+if not run_in_cluster:
+    rgidf = rgidf10.iloc[0:5, :]
 cfg.initialize()
 cfg.PARAMS['border'] = 80
-rgiid = ['RGI60-13.25022']
-cfg.PATHS['working_dir'] = utils.mkdir(os.path.join(outpath, 'working_dir'),
-                                       reset=True)
-gdirs = workflow.init_glacier_directories(rgiid, from_prepro_level=4,
+cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
+
+gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=4,
                                           reset=True, force=True)
-
-#gdirs = workflow.init_glacier_directories(rgidf, reset=True)
-#task_list = [
-#        tasks.define_glacier_region,
-#        tasks.glacier_masks,
-#        tasks.compute_centerlines,
-#        tasks.initialize_flowlines,
-#        tasks.compute_downstream_line,
-#        tasks.compute_downstream_bedshape,
-#        tasks.catchment_area,
-#        tasks.catchment_intersections,
-#        tasks.catchment_width_geom,
-#        tasks.catchment_width_correction,
-#        tasks.process_cru_data,
-#        tasks.local_t_star,
-#        tasks.mu_star_calibration,
-#        tasks.prepare_for_inversion,
-#        tasks.mass_conservation_inversion,
-#        tasks.filter_inversion_output,]
-#
-
 y0 = 2000
 nyears = 2000
 halfsize = 0
 workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
                              output_filesuffix=f'_origin_hf{halfsize}')
-for mtype in ['1', '2']:
-    fpath_prcp_diff = os.path.join(data_dir, f'prec_diff{mtype}.nc')
-    fpath_temp_diff = os.path.join(data_dir, f'temp_diff{mtype}.nc')
+for mtype in ['secnew_ctl_3', 'sec_ctl_3']:
+    fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
+    fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
     workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                 output_filesuffix=f'_exper{mtype}_hf{halfsize}',
+                                 output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
                                  fpath_temp_diff=fpath_temp_diff,
                                  fpath_prcp_diff=fpath_prcp_diff)
 
-output_list0 = []
+output_list = []
 suffixes = [f'_origin_hf{halfsize}', f'_exper1_hf{halfsize}', f'_exper2_hf{halfsize}']
 for suffix in suffixes:
-    output_list0.append(utils.compile_run_output(gdirs, input_filesuffix=suffix,
-                                                path=os.path.join(outpath, 'result'+suffix+'.nc')))
+    output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, path=outpath))
 
 y0 = 2000
 nyears = 2000
 halfsize = 15
 workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
                              output_filesuffix=f'_origin_hf{halfsize}')
-for mtype in ['1', '2']:
-    fpath_prcp_diff = os.path.join(data_dir, f'prec_diff{mtype}.nc')
-    fpath_temp_diff = os.path.join(data_dir, f'temp_diff{mtype}.nc')
+for mtype in ['secnew_ctl_3', 'sec_ctl_3']:
+    fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
+    fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
     workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                 output_filesuffix=f'_exper{mtype}_hf{halfsize}',
+                                 output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
                                  fpath_temp_diff=fpath_temp_diff,
                                  fpath_prcp_diff=fpath_prcp_diff)
 
-output_list15 = []
+output_list = []
 suffixes = [f'_origin_hf{halfsize}', f'_exper1_hf{halfsize}', f'_exper2_hf{halfsize}']
 for suffix in suffixes:
-    output_list15.append(utils.compile_run_output(gdirs, input_filesuffix=suffix,
-                                                path=os.path.join(outpath, 'result'+suffix+'.nc')))
+    output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, path=outpath))
 
-import matplotlib.pyplot as plt
-fig, ax = plt.subplots(1, 3)
-ylabels = ['Volume (km3)', 'Area (km2)', 'ELA (m)']
-colors = ['black', 'red', 'blue']
-for i, label in enumerate(['Origin', 'Exper1', 'Exper1']):
-    ds = output_list0[i]
-    volumes = ds.isel(rgi_id=0).volume.values * 1e-9
-    areas = ds.isel(rgi_id=0).area.values * 1e-6
-    elas = ds.isel(rgi_id=0).ela.values
-    ax[0].plot(range(len(volumes)), volumes, color=colors[i])
-    ax[1].plot(range(len(areas)), areas, color=colors[i])
-    ax[2].plot(range(len(elas)), elas, color=colors[i])
-
-ax[0].set_ylabel(ylabels[0])
-ax[1].set_ylabel(ylabels[1])
-ax[2].set_ylabel(ylabels[2])
-
-import matplotlib.pyplot as plt
-fig, ax = plt.subplots(1, 3)
-ylabels = ['Volume (km3)', 'Area (km2)', 'ELA (m)']
-colors = ['black', 'red', 'blue']
-for i, label in enumerate(['Origin', 'Exper1', 'Exper1']):
-    ds = output_list15[i]
-    volumes = ds.isel(rgi_id=0).volume.values * 1e-9
-    areas = ds.isel(rgi_id=0).area.values * 1e-6
-    elas = ds.isel(rgi_id=0).ela.values
-    ax[0].plot(range(len(volumes)), volumes, color=colors[i])
-    ax[1].plot(range(len(areas)), areas, color=colors[i])
-    ax[2].plot(range(len(elas)), elas, color=colors[i])
-
-ax[0].set_ylabel(ylabels[0])
-ax[1].set_ylabel(ylabels[1])
-ax[2].set_ylabel(ylabels[2])
+#import matplotlib.pyplot as plt
+#fig, ax = plt.subplots(1, 3)
+#ylabels = ['Volume (km3)', 'Area (km2)', 'ELA (m)']
+#colors = ['black', 'red', 'blue']
+#for i, label in enumerate(['Origin', 'Exper1', 'Exper1']):
+#    ds = output_list[i]
+#    volumes = ds.isel(rgi_id=0).volume.values * 1e-9
+#    areas = ds.isel(rgi_id=0).area.values * 1e-6
+#    elas = ds.isel(rgi_id=0).ela.values
+#    ax[0].plot(range(len(volumes)), volumes, color=colors[i])
+#    ax[1].plot(range(len(areas)), areas, color=colors[i])
+#    ax[2].plot(range(len(elas)), elas, color=colors[i])
+#
+#ax[0].set_ylabel(ylabels[0])
+#ax[1].set_ylabel(ylabels[1])
+#ax[2].set_ylabel(ylabels[2])
