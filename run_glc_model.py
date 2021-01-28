@@ -502,8 +502,8 @@ def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None, nyea
 
 
 #global root_dir, data_dir
-outpath = utils.mkdir(os.path.join(root_dir, 'cluster_output', 'Climate_3'))
-# outpath = utils.mkdir(os.path.join(working_dir, 'Climate_3'))
+# outpath = utils.mkdir(os.path.join(root_dir, 'cluster_output', 'Climate_3'))
+outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
 path10 = utils.get_rgi_region_file('10', '61')
 path13 = utils.get_rgi_region_file('13', '61')
 path14 = utils.get_rgi_region_file('14', '61')
@@ -566,7 +566,8 @@ for mtype in ['scenew_ctl_3', 'sce_ctl_3']:
 output_list = []
 suffixes = [f'_origin_hf{halfsize}', f'_exper1_hf{halfsize}', f'_exper2_hf{halfsize}']
 for suffix in suffixes:
-    output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, path=outpath))
+    output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
+                                                path=os.path.join(outpath, 'result'+suffix+'.nc')))
 
 y0 = 2000
 nyears = 2000
@@ -584,7 +585,8 @@ for mtype in ['secnew_ctl_3', 'sec_ctl_3']:
 output_list = []
 suffixes = [f'_origin_hf{halfsize}', f'_exper1_hf{halfsize}', f'_exper2_hf{halfsize}']
 for suffix in suffixes:
-    output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, path=outpath))
+    output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
+                                                path=os.path.join(outpath, 'result'+suffix+'.nc')))
 
 #import matplotlib.pyplot as plt
 #fig, ax = plt.subplots(1, 3)
