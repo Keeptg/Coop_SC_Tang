@@ -41,14 +41,14 @@ srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec /home/users/lifei/ima
   pip install --upgrade pip setuptools
   pip install mat73
   # OPTIONAL: install another OGGM version
-  pip install --upgrade "git+https://github.com/OGGM/oggm.git"
+  # pip install --upgrade "git+https://github.com/OGGM/oggm.git"
+  pip install --upgrade "git+https://github.com/OGGM/oggm.git@c05d3307907444c3aa6bcf631e474c58208bc7cc
   #pip install --upgrade "git+https://github.com/OGGM/oggm.git@af0ac438be77a0f86ae2e33538c894c8a34061db"
   # Finally, the run
   python3 ./run_glc_model.py
 
 EOF
-echo "Copying files..."
-rsync -avzh "$OUTDIR" /home/lifei/www/run_output/Pro_piao/Climate_3
+#rsync -avzh "$OUTDIR" /home/lifei/www/run_output/Pro_piao/Climate_3
 #echo "Copying files..."
 #cp -R "$WORKDIR" /home/users/lifei/my_run_output/ 
 
