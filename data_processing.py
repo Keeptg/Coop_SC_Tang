@@ -102,11 +102,11 @@ def write_climate_diff2nc(file_name, var_name, prcp_units=None, temp_units=None,
         suffix = '_' + suffix
     climate_path = os.path.join(data_dir, file_name)
     data = mat73.loadmat(climate_path)
-    var_ds = write_mat2nc(data, var_name, 1, units=prcp_units)
-    var_ds.to_netcdf(os.path.join(data_dir, f'prec{suffix}.nc'))
+    var_ds = write_mat2nc(data, var_name, 1)
+    var_ds.to_netcdf(os.path.join(data_dir, f'{var_name}{suffix}.nc'))
 
 
-write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_sce_ctl', suffix='prcp_diff_sce_3')
-write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_sce_ctl', suffix='temp_diff_sec_ctl_3')
-write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_scenew_ctl', suffix='prcp_diff_secnew_ctl_3')
-write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_scenew_ctl', suffix='temp_diff_secnew_ctl_3')
+write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_sce_ctl', suffix='3')
+write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_sce_ctl', suffix='3')
+write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_scenew_ctl', suffix='3')
+write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_scenew_ctl', suffix='3')
