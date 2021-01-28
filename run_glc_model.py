@@ -514,7 +514,7 @@ rgidf13 = gpd.read_file(path13)
 rgidf14 = gpd.read_file(path14)
 rgidf15 = gpd.read_file(path15)
 rgidf = pd.concat([rgidf10, rgidf13, rgidf14, rgidf15])
-run_for_test = True
+run_for_test = False
 if (not run_in_cluster) or run_for_test:
     rgidf = rgidf10.iloc[0:5, :]
 cfg.initialize()
