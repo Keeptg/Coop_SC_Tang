@@ -520,7 +520,7 @@ cfg.initialize()
 cfg.PARAMS['border'] = 80
 cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
 
-gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=4,
+gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
                                           reset=True, force=True)
 # gdirs = workflow.init_glacier_directories(rgidf)
 # task_list = [
