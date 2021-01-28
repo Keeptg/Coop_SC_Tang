@@ -617,7 +617,7 @@ args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], prcp_perf
              temp_prefix=temp_prefix, run_for_test=run_for_test)
 args_list = [args0, args1, args2]
 
-task_num = int(os.environ.get(['TASK_ID']))
+task_num = int(os.environ.get('TASK_ID'))
 run_with_job_array(**args_list[task_num])
 #import matplotlib.pyplot as plt
 #fig, ax = plt.subplots(1, 3)
