@@ -513,13 +513,14 @@ rgidf13 = gpd.read_file(path13)
 rgidf14 = gpd.read_file(path14)
 rgidf15 = gpd.read_file(path15)
 rgidf = pd.concat([rgidf10, rgidf13, rgidf14, rgidf15])
-if not run_in_cluster:
+run_for_test = True
+if (not run_in_cluster) or run_for_test:
     rgidf = rgidf10.iloc[0:5, :]
 cfg.initialize()
 cfg.PARAMS['border'] = 80
 cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
 
-gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=4,
+gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
                                           reset=True, force=True)
 y0 = 2000
 nyears = 2000
