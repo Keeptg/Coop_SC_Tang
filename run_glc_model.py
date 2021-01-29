@@ -573,6 +573,10 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefi
                                     fpath_prcp_diff=fpath_prcp_diff)
 
     ds = utils.compile_run_output(gdirs, input_filesuffix=suffix, path=False)
+    # to avoid cluster stull problem report in:
+    # https://github.com/OGGM/oggm/pull/1122 and 
+    # https://github.com/pydata/xarray/issues/4710
+
     ds.load().to_netcdf(path=os.path.join(outpath, 'result'+suffix+'.nc'))
 
 
