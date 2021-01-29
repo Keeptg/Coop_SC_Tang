@@ -557,9 +557,6 @@ def pre_process_tasks(run_for_test=False):
 
 def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefix=None, run_for_test=False):
 
-    y0 = 2000
-    nyears = 2000
-    halfsize = 0
     outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
     gdirs = pre_process_tasks(run_for_test=run_for_test)
     if mtype == 'origin':
