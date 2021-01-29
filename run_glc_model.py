@@ -517,7 +517,7 @@ def pre_process_tasks(run_for_test=False):
     if (not run_in_cluster) or run_for_test:
         rgidf = rgidf10.iloc[0:5, :]
     cfg.initialize()
-    cfg.PARAMS['border'] = 80
+    cfg.PARAMS['border'] = 160
     cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
     cfg.PARAMS['continue_on_error'] = True
 
@@ -558,7 +558,7 @@ def pre_process_tasks(run_for_test=False):
 def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefix=None, run_for_test=False):
 
     y0 = 2000
-    nyears = 1000
+    nyears = 2000
     halfsize = 0
     outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
     gdirs = pre_process_tasks(run_for_test=run_for_test)
@@ -575,8 +575,8 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefi
                                     fpath_temp_diff=fpath_temp_diff,
                                     fpath_prcp_diff=fpath_prcp_diff)
 
-    utils.compile_run_output(gdirs, input_filesuffix=suffix, 
-                             path=os.path.join(outpath, 'result'+suffix+'.nc'))
+    ds = utils.compile_run_output(gdirs, input_filesuffix=suffix, path=False)
+    ds.load().to_netcdf(path=os.path.join(outpath, 'result'+suffix+'.nc'))
 
 
 def single_node_example(run_for_test=False):
@@ -606,9 +606,9 @@ def single_node_example(run_for_test=False):
 mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
 prcp_prefix = 'Precip_diff'
 temp_prefix = 'T2m_diff'
-run_for_test = False
+run_for_test = True
 y0 = 2000
-nyears = 1000
+nyears = 2000
 halfsize = 0
 args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], run_for_test=run_for_test)
 args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], prcp_prefix=prcp_prefix, 
