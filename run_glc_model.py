@@ -640,12 +640,17 @@ y0 = 2000
 nyears = 2000
 halfsize = 0
 mean_years = (2001, 2011)
-args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], run_for_test=run_for_test, 
-             output_dir=output_dir, mean_years=mean_years)
-args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], prcp_prefix=prcp_prefix,
-             temp_prefix=temp_prefix, run_for_test=run_for_test, output_dir=output_dir, mean_years=mean_years)
-args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], prcp_prefix=prcp_prefix,
-             temp_prefix=temp_prefix, run_for_test=run_for_test, mean_years=mean_years)
+args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
+             run_for_test=run_for_test, output_dir=output_dir, 
+             mean_years=mean_years)
+args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
+             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+             run_for_test=run_for_test, output_dir=output_dir, 
+             mean_years=mean_years)
+args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+             run_for_test=run_for_test, output_dir=output_dir,
+             mean_years=mean_years)
 args_list = [args0, args1, args2]
 
 task_num = int(os.environ.get('TASK_ID'))
