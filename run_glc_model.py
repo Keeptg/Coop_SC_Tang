@@ -536,7 +536,7 @@ def pre_process_tasks(run_for_test=False):
     cfg.initialize()
     cfg.PARAMS['border'] = 160
     cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
-    cfg.PARAMS['continue_on_error'] = False
+    cfg.PARAMS['continue_on_error'] = True
     cfg.PARAMS['use_multiprocessing'] = True
 
     gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1,
