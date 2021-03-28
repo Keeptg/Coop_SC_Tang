@@ -580,8 +580,8 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefi
                                     output_filesuffix=f'_origin_hf{halfsize}', mean_years=mean_years)
     else:
         suffix = f'_exper_{mtype}_hf{halfsize}'
-        fpath_prcp_diff = os.path.join(data_dir, f'{prcp_prefix}_{mtype}.nc')
-        fpath_temp_diff = os.path.join(data_dir, f'{temp_prefix}_{mtype}.nc')
+        fpath_prcp_diff = os.path.join(data_dir, f'{prcp_prefix}{mtype}.nc')
+        fpath_temp_diff = os.path.join(data_dir, f'{temp_prefix}{mtype}.nc')
         workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
                                      output_filesuffix=f'_exper_{mtype}_hf{halfsize}', mean_years=mean_years,
                                      fpath_temp_diff=fpath_temp_diff,
