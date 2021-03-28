@@ -16,7 +16,7 @@ if hostname in ['login01', 'login02'] or 'node' in hostname:
         if not os.path.exists(dir_):
             os.makedirs(dir_)
     run_in_cluster = True
-elif hostname is 'WGJ_Group':
+elif hostname == 'WGJ-Group':
     root_dir = '/home/lifei/Data/code_project/Pro_piao'
     data_dir = os.path.join(root_dir, 'Data')
     working_dir = os.path.join(root_dir, 'working_dir')
