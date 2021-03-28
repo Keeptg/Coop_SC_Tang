@@ -1,9 +1,9 @@
+from multiprocessing import Value
 import os
 import logging
-import sys
-import pickle
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 import geopandas as gpd
 import xarray as xr
 from oggm import utils, tasks, cfg, workflow
@@ -42,7 +42,7 @@ class MyPastMassBalance(MassBalanceModel):
 
     def __init__(self, gdir, mu_star=None, bias=None,
                  filename='climate_historical', input_filesuffix='',
-                 repeat=False, ys=None, ye=None, check_calib_params=True):
+                 repeat=False, ys=None, ye=None, check_calib_params=True, mean_years=None):
         """Initialize.
 
         Parameters
@@ -133,6 +133,7 @@ class MyPastMassBalance(MassBalanceModel):
         self.temp_bias = 0.
         self.prcp_bias = 0.
         self.repeat = repeat
+        self.mean_years = mean_years
 
         # Read file
         fpath = gdir.get_filepath(filename, filesuffix=input_filesuffix)
@@ -250,6 +251,7 @@ class MyPastMassBalance(MassBalanceModel):
         t, tfmelt, prcp, prcpsol = self._get_2d_annual_climate(heights, year)
         return (t.mean(axis=1), tfmelt.sum(axis=1),
                 prcp.sum(axis=1), prcpsol.sum(axis=1))
+    
 
     def get_monthly_mb(self, heights, year=None, **kwargs):
 
@@ -258,10 +260,22 @@ class MyPastMassBalance(MassBalanceModel):
         mb_month -= self.bias * SEC_IN_MONTH / SEC_IN_YEAR
         return mb_month / SEC_IN_MONTH / self.rho
 
-    def get_annual_mb(self, heights, year=None, **kwargs):
+    def get_annual_mb(self, heights, year=None):
 
-        _, temp2dformelt, _, prcpsol = self._get_2d_annual_climate(heights,
-                                                                   year)
+        if self.mean_years:
+            mean_years = self.mean_years
+            years = np.arange(mean_years[0], mean_years[1]+1, step=1)
+            temp_lists, prcpsol_lists = [], []
+            for year in years:
+                _, temp2dformelt, _, prcpsol = self._get_2d_annual_climate(heights, year)
+                temp_lists.append(temp2dformelt)
+                prcpsol_lists.append(prcpsol)
+            temp2dformelt = np.mean(temp_lists, axis=0)
+            prcpsol = np.mean(prcpsol_lists, axis=0)
+        else:
+            _, temp2dformelt, _, prcpsol = self._get_2d_annual_climate(heights,
+                                                                    year)
+            
         mb_annual = np.sum(prcpsol - self.mu_star * temp2dformelt, axis=1)
         return (mb_annual - self.bias) / SEC_IN_YEAR / self.rho
 
@@ -280,7 +294,7 @@ class MyRandomMassBalance(MassBalanceModel):
     def __init__(self, gdir, mu_star=None, bias=None,
                  y0=None, halfsize=15, seed=None,
                  filename='climate_historical', input_filesuffix='',
-                 all_years=False, unique_samples=False):
+                 all_years=False, unique_samples=False, mean_years=None):
         """Initialize.
 
         Parameters
@@ -321,11 +335,13 @@ class MyRandomMassBalance(MassBalanceModel):
         self.valid_bounds = [-1e4, 2e4]  # in m
         self.mbmod = MyPastMassBalance(gdir, mu_star=mu_star, bias=bias,
                                        filename=filename,
-                                       input_filesuffix=input_filesuffix)
+                                       input_filesuffix=input_filesuffix, mean_years=mean_years)
 
         # Climate period
         if all_years:
             self.years = self.mbmod.years
+        elif mean_years:
+            self.years = np.arange(mean_years[0], mean_years[1]+1, step=1)
         else:
             if y0 is None:
                 df = gdir.read_json('local_mustar')
@@ -341,6 +357,7 @@ class MyRandomMassBalance(MassBalanceModel):
 
         # Sampling without replacement
         self.unique_samples = unique_samples
+        self.mean_years = mean_years
         if self.unique_samples:
             self.sampling_years = self.years
 
@@ -407,14 +424,14 @@ class MyRandomMassBalance(MassBalanceModel):
         ryr = date_to_floatyear(self.get_state_yr(ryr), m)
         return self.mbmod.get_monthly_mb(heights, year=ryr)
 
-    def get_annual_mb(self, heights, year=None, **kwargs):
+    def get_annual_mb(self, heights, year=None):
         ryr = self.get_state_yr(int(year))
         return self.mbmod.get_annual_mb(heights, year=ryr)
 
 
 @entity_task(log)
 def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None, nyears=1000,
-                          y0=None, halfsize=15,
+                          y0=None, halfsize=15, mean_years=None,
                           bias=None, seed=None,
                           store_monthly_step=False,
                           climate_filename='climate_historical',
@@ -480,7 +497,7 @@ def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None, nyea
                                      bias=bias, seed=seed,
                                      filename=climate_filename,
                                      input_filesuffix=climate_input_filesuffix,
-                                     unique_samples=unique_samples)
+                                     unique_samples=unique_samples, mean_years=mean_years)
 
     lat, lon = gdir.cenlat, gdir.cenlon
 
@@ -519,19 +536,13 @@ def pre_process_tasks(run_for_test=False):
     cfg.initialize()
     cfg.PARAMS['border'] = 160
     cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
-    cfg.PARAMS['continue_on_error'] = True
+    cfg.PARAMS['continue_on_error'] = False
+    cfg.PARAMS['use_multiprocessing'] = True
 
-    # gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=3,
-    #                                           reset=True, force=True)
-    # workflow.gis_prepro_tasks(gdirs)
-    # workflow.climate_tasks(gdirs)
-    # workflow.inversion_tasks(gdirs)
-    # workflow.execute_entity_task(tasks.init_present_time_glacier, gdirs)
-    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1)
-    for gdir in gdirs:
-        gis.process_dem(gdir)
+    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1,
+                                              reset=True, force=True)
     task_list = [
-    #    tasks.define_glacier_region,
+        tasks.define_glacier_region,
         tasks.glacier_masks,
         tasks.compute_centerlines,
         tasks.initialize_flowlines,
@@ -555,22 +566,26 @@ def pre_process_tasks(run_for_test=False):
     return gdirs
 
 
-def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefix=None, run_for_test=False):
+def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefix=None, 
+                       run_for_test=False, mean_years=None, output_dir=None):
 
-    outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
+    if output_dir is None:
+        outpath = utils.mkdir(cluster_dir, reset=False)
+    else:
+        outpath = utils.mkdir(os.path.join(cluster_dir, output_dir), reset=False)
     gdirs = pre_process_tasks(run_for_test=run_for_test)
     if mtype == 'origin':
         suffix = f'_origin_hf{halfsize}'
         workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                    output_filesuffix=f'_origin_hf{halfsize}')
+                                    output_filesuffix=f'_origin_hf{halfsize}', mean_years=mean_years)
     else:
         suffix = f'_exper_{mtype}_hf{halfsize}'
         fpath_prcp_diff = os.path.join(data_dir, f'{prcp_prefix}_{mtype}.nc')
         fpath_temp_diff = os.path.join(data_dir, f'{temp_prefix}_{mtype}.nc')
         workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                    output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
-                                    fpath_temp_diff=fpath_temp_diff,
-                                    fpath_prcp_diff=fpath_prcp_diff)
+                                     output_filesuffix=f'_exper_{mtype}_hf{halfsize}', mean_years=mean_years,
+                                     fpath_temp_diff=fpath_temp_diff,
+                                     fpath_prcp_diff=fpath_prcp_diff)
 
     ds = utils.compile_run_output(gdirs, input_filesuffix=suffix, path=False)
     # to avoid cluster stull problem report in:
@@ -581,45 +596,64 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefi
 
 
 def single_node_example(run_for_test=False):
-    y0 = 2000
-    nyears = 2000
-    halfsize = 15
+    y0 = 2008
+    nyears = 100
+    halfsize = 0
+    mean_years = (2002, 2012)
     mtypes = ['scenew_ctl_3', 'sce_ctl_3']
     outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
     gdirs = pre_process_tasks(run_for_test=run_for_test)
     workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                output_filesuffix=f'_origin_hf{halfsize}')
+                                 output_filesuffix=f'_origin_hf{halfsize}', mean_years=mean_years)
     for mtype in mtypes:
         fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
         fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
         workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                    output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
-                                    fpath_temp_diff=fpath_temp_diff,
-                                    fpath_prcp_diff=fpath_prcp_diff)
+                                     output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
+                                     fpath_temp_diff=fpath_temp_diff,
+                                     fpath_prcp_diff=fpath_prcp_diff, mean_years=mean_years)
 
     output_list = []
     suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}', f'_exper_{mtypes[1]}_hf{halfsize}']
     for suffix in suffixes:
         output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
-                                                    path=os.path.join(outpath, 'result'+suffix+'.nc')))
+                                                    path=os.path.join(outpath, 'result'+suffix+'.nc'),
+                                                    use_compression=True))
+    
+    # TODO: Test!
+    a = output_list[0].volume.values
+    print(a[-1, 2])
 
+    
+# single_node_example()
 
-mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
-prcp_prefix = 'Precip_diff'
-temp_prefix = 'T2m_diff'
-run_for_test = False
+# mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
+# prcp_prefix = 'Precip_diff'
+# temp_prefix = 'T2m_diff'
+mtypes = ['origin', '1', '2']
+prcp_prefix = 'prec_diff'
+temp_prefix = 'temp_diff'
+output_dir = 'Climate1_2'
+run_for_test = True
 y0 = 2000
 nyears = 2000
 halfsize = 0
-args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], run_for_test=run_for_test)
-args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], prcp_prefix=prcp_prefix, 
-             temp_prefix=temp_prefix, run_for_test=run_for_test)
-args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], prcp_prefix=prcp_prefix, 
-             temp_prefix=temp_prefix, run_for_test=run_for_test)
+mean_years = (2001, 2011)
+args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], run_for_test=run_for_test, 
+             output_dir=output_dir, mean_years=mean_years)
+args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], prcp_prefix=prcp_prefix,
+             temp_prefix=temp_prefix, run_for_test=run_for_test, output_dir=output_dir, mean_years=mean_years)
+args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], prcp_prefix=prcp_prefix,
+             temp_prefix=temp_prefix, run_for_test=run_for_test, mean_years=mean_years)
 args_list = [args0, args1, args2]
 
 task_num = int(os.environ.get('TASK_ID'))
 run_with_job_array(**args_list[task_num])
+
+
+
+
+
 #import matplotlib.pyplot as plt
 #fig, ax = plt.subplots(1, 3)
 #ylabels = ['Volume (km3)', 'Area (km2)', 'ELA (m)']
