@@ -6,7 +6,7 @@
 #SBATCH --time=48:00:00
 #SBATCH --mail-user=lifei@itpcas.ac.cn
 #SBATCH --mail-type=ALL
-#sbatch --array=0-2
+#SBATCH --array=0-2
 
 # Abort whenever a single step fails. Without this, bash will just continue on errors.
 set -e
