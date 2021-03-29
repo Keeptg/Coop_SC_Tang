@@ -579,6 +579,8 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefi
         workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
                                     output_filesuffix=f'_origin_hf{halfsize}', mean_years=mean_years)
     else:
+        if CLIMATE_DATA == '2':
+            mtype = '_' + mtype
         suffix = f'_exper_{mtype}_hf{halfsize}'
         fpath_prcp_diff = os.path.join(data_dir, f'{prcp_prefix}{mtype}.nc')
         fpath_temp_diff = os.path.join(data_dir, f'{temp_prefix}{mtype}.nc')
@@ -628,14 +630,20 @@ def single_node_example(run_for_test=False):
     
 # single_node_example()
 
-# mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
-# prcp_prefix = 'Precip_diff'
-# temp_prefix = 'T2m_diff'
-mtypes = ['origin', '1', '2']
-prcp_prefix = 'prec_diff'
-temp_prefix = 'temp_diff'
-output_dir = 'Climate1_2'
-run_for_test = False
+global CLIMATE_DATA
+
+CLIMATE_DATA = '1'
+if CLIMATE_DATA == '1':
+    mtypes = ['origin', '1', '2']
+    prcp_prefix = 'prec_diff'
+    temp_prefix = 'temp_diff'
+    output_dir = 'Climate1_2'
+elif CLIMATE_DATA == '2':
+    mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
+    prcp_prefix = 'Precip_diff'
+    temp_prefix = 'T2m_diff'
+
+run_for_test = True
 y0 = 2000
 nyears = 2000
 halfsize = 0
