@@ -632,7 +632,7 @@ def single_node_example(run_for_test=False):
 
 global CLIMATE_DATA
 
-CLIMATE_DATA = '1'
+CLIMATE_DATA = '2'
 if CLIMATE_DATA == '1':
     mtypes = ['origin', '1', '2']
     prcp_prefix = 'prec_diff'
@@ -642,8 +642,9 @@ elif CLIMATE_DATA == '2':
     mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
     prcp_prefix = 'Precip_diff'
     temp_prefix = 'T2m_diff'
+    output_dir = 'Climate_3'
 
-run_for_test = True
+run_for_test = False
 y0 = 2000
 nyears = 2000
 halfsize = 0
