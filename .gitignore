@@ -3,3 +3,4 @@ __pycache__/
 .idea/
 workspace.code-workspace
 compare_result.py
+run_log/
