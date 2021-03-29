@@ -2,97 +2,50 @@ import os
 import numpy as np
 import pandas as pd
 import xarray as xr
+
+from path_config import *
+%matplotlib widget
 import matplotlib.pyplot as plt
 
-root_dir = '/home/keeptg/Data/Study_in_Innsbruck/Pro_piao/'
-data_dir = os.path.join(root_dir, 'cluster_output')
-os.path.exists(data_dir)
+data_dir = os.path.join(root_dir, 'Climate1_2')
+org_ds = xr.open_dataset(os.path.join(data_dir, 'result_origin_hf0.nc')) 
+ex1_ds = xr.open_dataset(os.path.join(data_dir, 'result_exper_1_hf0.nc'))
+ex2_ds = xr.open_dataset(os.path.join(data_dir, 'result_exper_2_hf0.nc'))
+org_vol = org_ds.volume.sum(dim='rgi_id')
+ex1_vol = ex1_ds.volume.sum(dim='rgi_id')
+ex2_vol = ex2_ds.volume.sum(dim='rgi_id')
 
-exp1 = os.path.join(data_dir, 'result_border160_exper1_hf0.nc')
-exp2 = os.path.join(data_dir, 'result_border160_exper2_hf0.nc')
-orig = os.path.join(data_dir, 'result_border160_origin_hf0.nc')
-
-ds0 = xr.open_dataset(orig)
-ds1 = xr.open_dataset(exp1)
-ds2 = xr.open_dataset(exp2)
-
-vol0 = ds0.volume.sum(dim='rgi_id')
-area0 = ds0.area.sum(dim='rgi_id')
-vol1 = ds1.volume.sum(dim='rgi_id')
-area1 = ds1.area.sum(dim='rgi_id')
-vol2 = ds2.volume.sum(dim='rgi_id')
-area2 = ds2.area.sum(dim='rgi_id')
-
-fig, axs = plt.subplots(1, 2)
-colors = ['black', 'red', 'blue']
-ylabels = ['Volume (km$^3$)', 'Area (km$^2$)']
-xlabels = 'Years'
-labels = ['Original Clim.', 'Experiment Diff. 1', 'Experiment Diff. 2']
-
-for i, (vol, area) in enumerate(zip([vol0, vol1, vol2], [area0, area1, area2])):
-    label = labels[i]
-    color = colors[i]
-    axs[0].plot(vol.data*1e-9, color=color, label=label)
-    axs[1].plot(area.data*1e-6, color=color, label=label)
-    axs[0].set_ylabel(ylabels[0]), axs[0].set_xlabel(xlabels)
-    axs[1].set_ylabel(ylabels[1]), axs[1].set_xlabel(xlabels)
-
-rgi10 = ds0.rgi_id.str.contains('RGI60-13.')
-ds0_r10 = ds0.isel(rgi_id=np.where(rgi10.values)[0])
-ds1_r10 = ds1.isel(rgi_id=np.where(rgi10.values)[0])
-ds2_r10 = ds2.isel(rgi_id=np.where(rgi10.values)[0])
-
-vol0 = ds0_r10.volume.sum(dim='rgi_id')
-area0 = ds0_r10.area.sum(dim='rgi_id')
-vol1 = ds1_r10.volume.sum(dim='rgi_id')
-area1 = ds1_r10.area.sum(dim='rgi_id')
-vol2 = ds2_r10.volume.sum(dim='rgi_id')
-area2 = ds2_r10.area.sum(dim='rgi_id')
-
-fig, axs = plt.subplots(1, 2)
-colors = ['black', 'red', 'blue']
-ylabels = ['Volume (km$^3$)', 'Area (km$^2$)']
-xlabels = 'Years'
-labels = ['Original Clim.', 'Experiment Diff. 1', 'Experiment Diff. 2']
-
-for i, (vol, area) in enumerate(zip([vol0, vol1, vol2], [area0, area1, area2])):
-    label = labels[i]
-    color = colors[i]
-    axs[0].plot(vol.data*1e-9, color=color, label=label)
-    axs[1].plot(area.data*1e-6, color=color, label=label)
-    axs[0].set_ylabel(ylabels[0]), axs[0].set_xlabel(xlabels)
-    axs[1].set_ylabel(ylabels[1]), axs[1].set_xlabel(xlabels)
-axs[0].legend()
-axs[1].legend()
-
-diff_dir = os.path.join(root_dir, 'Data')
-precp1 = xr.open_dataset(os.path.join(diff_dir, 'prec_diff1.nc'))
-precp2 = xr.open_dataset(os.path.join(diff_dir, 'prec_diff2.nc'))
-temp1 = xr.open_dataset(os.path.join(diff_dir, 'temp_diff1.nc'))
-temp2 = xr.open_dataset(os.path.join(diff_dir, 'temp_diff2.nc'))
-
-from oggm import utils, cfg
-import geopandas as gpd
-cfg.initialize()
-path = utils.get_rgi_region_file(region='10')
-rgidf = gpd.read_file(path)
-print(rgidf.columns.values)
-rgidf = rgidf[rgidf.O2Region.str.contains('4')]
-lons = rgidf.CenLon
-lats = rgidf.CenLat
-
-precp1_ch = precp1.sel(lat=lats, lon=lons, method='nearest')
-precp2_ch = precp2.sel(lat=lats, lon=lons, method='nearest')
-temp1_ch = temp1.sel(lat=lats, lon=lons, method='nearest')
-temp2_ch = temp2.sel(lat=lats, lon=lons, method='nearest')
-precp1_arr = precp1_ch.pr.values.mean(axis=(1, 2))
-precp2_arr = precp2_ch.pr.values.mean(axis=(1, 2))
-temp1_arr = temp1_ch.tas.values.mean(axis=(1, 2))
-temp2_arr = temp2_ch.tas.values.mean(axis=(1, 2))
+data_dir = os.path.join(root_dir, 'Climate1_2_pre')
+org0_ds = xr.open_dataset(os.path.join(data_dir, 'result_border160_origin_hf0.nc')) 
+ex10_ds = xr.open_dataset(os.path.join(data_dir, 'result_border160_exper1_hf0.nc'))
+ex20_ds = xr.open_dataset(os.path.join(data_dir, 'result_border160_exper2_hf0.nc'))
+org0_vol = org0_ds.volume.sum(dim='rgi_id')
+ex10_vol = ex10_ds.volume.sum(dim='rgi_id')
+ex20_vol = ex20_ds.volume.sum(dim='rgi_id')
 
 fig, ax = plt.subplots()
-ax.bar(np.arange(1, 13, 1)-.2, precp1_arr, width=.4, fc='none', ec='blue', label='Experiment 1')
-ax.bar(np.arange(1, 13, 1)+.2, precp2_arr, width=.4, fc='none', ec='red', label='Experiment 1')
-axt = ax.twinx()
-axt.plot(temp1_arr, color='blue', label='Experiment 1')
-axt.plot(temp2_arr, color='red', label='Experiment 2')
+ax.plot(org0_vol.hydro_year, org0_vol, color='black', label='org', ls=(0, (3, 1)))
+ax.plot(ex10_vol.hydro_year, ex10_vol, color='blue', label='org', ls=(0, (3, 1)))
+ax.plot(ex20_vol.hydro_year, ex20_vol, color='red', label='org', ls=(0, (3, 1)))
+ax.plot(org_vol.hydro_year, org_vol, color='black', label='org')
+ax.plot(ex1_vol.hydro_year, ex1_vol, color='blue', label='org')
+ax.plot(ex2_vol.hydro_year, ex2_vol, color='red', label='org')
+
+fig, ax = plt.subplots()
+
+ax.plot(org_vol.hydro_year, org_vol, color='black', label='org')
+ax.plot(ex1_vol.hydro_year, ex1_vol, color='blue', label='exp1')
+ax.plot(ex2_vol.hydro_year, ex2_vol, color='red', label='exp2')
+ax.set_xlabel('Year'), ax.set_ylabel('Ice volume (km$^3$)')
+
+in_rgn10 = ['RGI60-10' in id_ for id_ in org_ds.rgi_id.values]
+org_vol10 = org_ds.sel(rgi_id=in_rgn10).volume.sum(dim='rgi_id')
+ex1_vol10 = ex1_ds.sel(rgi_id=in_rgn10).volume.sum(dim='rgi_id')
+ex2_vol10 = ex2_ds.sel(rgi_id=in_rgn10).volume.sum(dim='rgi_id')
+fig, ax = plt.subplots()
+ax.plot(org_vol10.hydro_year, org_vol10, color='black', label='org')
+ax.plot(ex1_vol10.hydro_year, ex1_vol10, color='blue', label='exp1')
+ax.plot(ex2_vol10.hydro_year, ex2_vol10, color='red', label='exp2')
+ax.set_xlabel('Year'), ax.set_ylabel('Ice volume (km$^3$)')
+
+
