@@ -650,7 +650,7 @@ def single_node_example(run_for_test=False):
 
 global CLIMATE_DATA
 
-CLIMATE_DATA = '2'
+CLIMATE_DATA = '1'
 if CLIMATE_DATA == '1':
     mtypes = ['origin', '1', '2']
     prcp_prefix = 'prec_diff'
