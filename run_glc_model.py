@@ -662,7 +662,7 @@ elif CLIMATE_DATA == '2':
     temp_prefix = 'T2m_diff'
     output_dir = 'Climate_3'
 
-run_for_test = False
+run_for_test = True
 y0 = 2000
 nyears = 2000
 halfsize = 0
