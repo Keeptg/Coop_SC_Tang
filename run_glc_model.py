@@ -429,16 +429,13 @@ class MyRandomMassBalance(MassBalanceModel):
 
 
 @entity_task(log)
-def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None, nyears=1000,
-                          y0=None, halfsize=15, mean_years=None,
-                          bias=None, seed=None,
-                          store_monthly_step=False,
+def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
+                          nyears=1000, y0=None, halfsize=15, mean_years=None,
+                          bias=None, seed=None, store_monthly_step=False,
                           climate_filename='climate_historical',
-                          climate_input_filesuffix='',
-                          output_filesuffix='', init_model_fls=None,
-                          zero_initial_glacier=False,
-                          unique_samples=False,
-                          **kwargs):
+                          climate_input_filesuffix='', output_filesuffix='',
+                          init_model_fls=None, zero_initial_glacier=False,
+                          unique_samples=False, **kwargs):
     """Runs the random mass-balance model for a given number of years.
 
     This will initialize a
@@ -565,36 +562,52 @@ def pre_process_tasks(run_for_test=False):
     return gdirs
 
 
-def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None, temp_prefix=None, 
-                       run_for_test=False, mean_years=None, output_dir=None):
+def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
+                       temp_prefix=None, run_for_test=False, mean_years=None,
+                       output_dir=None, output_filesuffix=None):
 
     if output_dir is None:
         outpath = utils.mkdir(cluster_dir, reset=False)
     else:
-        outpath = utils.mkdir(os.path.join(cluster_dir, output_dir), reset=False)
+        outpath = utils.mkdir(os.path.join(cluster_dir, output_dir),
+                              reset=False)
     gdirs = pre_process_tasks(run_for_test=run_for_test)
     if mtype == 'origin':
         suffix = f'_origin_hf{halfsize}'
-        workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                    output_filesuffix=f'_origin_hf{halfsize}', mean_years=mean_years)
+        workflow.execute_entity_task(run_my_random_climate, gdirs, 
+                                     nyears=nyears, y0=y0, seed=1,
+                                     halfsize=halfsize,
+                                     output_filesuffix=f'_origin_hf{halfsize}',
+                                     mean_years=mean_years)
     else:
         if CLIMATE_DATA == '2':
             mtype = '_' + mtype
-        suffix = f'_exper_{mtype}_hf{halfsize}'
-        fpath_prcp_diff = os.path.join(data_dir, f'{prcp_prefix}{mtype}.nc')
-        fpath_temp_diff = os.path.join(data_dir, f'{temp_prefix}{mtype}.nc')
-        workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                     output_filesuffix=f'_exper_{mtype}_hf{halfsize}', mean_years=mean_years,
+        if prcp_prefix:
+            fpath_prcp_diff = os.path.join(data_dir, f'{prcp_prefix}{mtype}.nc')
+        else:
+            fpath_prcp_diff = None
+
+        if temp_prefix:
+            fpath_temp_diff = os.path.join(data_dir, f'{temp_prefix}{mtype}.nc')
+        else:
+            fpath_temp_diff = None
+
+        if output_filesuffix is None:
+            output_filesuffix = f'_exper_{mtype}_hf{halfsize}'
+        workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears,
+                                     y0=y0, seed=1, halfsize=halfsize,
+                                     output_filesuffix=output_filesuffix,
+                                     mean_years=mean_years,
                                      fpath_temp_diff=fpath_temp_diff,
                                      fpath_prcp_diff=fpath_prcp_diff)
 
-    ds = utils.compile_run_output(gdirs, input_filesuffix=suffix, path=False)
+    ds = utils.compile_run_output(gdirs, input_filesuffix=output_filesuffix, path=False)
     # to avoid cluster stull problem report in:
     # https://github.com/OGGM/oggm/pull/1122 and 
     # https://github.com/pydata/xarray/issues/4710
-    print(f"Save result{suffix}.nc")
+    print(f"Save result{output_filesuffix}.nc")
 
-    ds.load().to_netcdf(path=os.path.join(outpath, 'result'+suffix+'.nc'))
+    ds.load().to_netcdf(path=os.path.join(outpath, 'result'+output_filesuffix+'.nc'))
 
 
 def single_node_example(run_for_test=False):
@@ -605,22 +618,28 @@ def single_node_example(run_for_test=False):
     mtypes = ['scenew_ctl_3', 'sce_ctl_3']
     outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
     gdirs = pre_process_tasks(run_for_test=run_for_test)
-    workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
-                                 output_filesuffix=f'_origin_hf{halfsize}', mean_years=mean_years)
+    workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears,
+                                 y0=y0, seed=1, halfsize=halfsize,
+                                 output_filesuffix=f'_origin_hf{halfsize}',
+                                 mean_years=mean_years)
     for mtype in mtypes:
         fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
         fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
-        workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears, y0=y0, seed=1, halfsize=halfsize,
+        workflow.execute_entity_task(run_my_random_climate, gdirs,
+                                     nyears=nyears, y0=y0, seed=1,
+                                     halfsize=halfsize,
                                      output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
                                      fpath_temp_diff=fpath_temp_diff,
-                                     fpath_prcp_diff=fpath_prcp_diff, mean_years=mean_years)
+                                     fpath_prcp_diff=fpath_prcp_diff,
+                                     mean_years=mean_years)
 
     output_list = []
-    suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}', f'_exper_{mtypes[1]}_hf{halfsize}']
+    suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}',
+                f'_exper_{mtypes[1]}_hf{halfsize}']
     for suffix in suffixes:
+        path = os.path.join(outpath, 'result'+suffix+'.nc')
         output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
-                                                    path=os.path.join(outpath, 'result'+suffix+'.nc'),
-                                                    use_compression=True))
+                                                    path=path, use_compression=True))
     
     # TODO: Test!
     a = output_list[0].volume.values
@@ -648,6 +667,8 @@ y0 = 2000
 nyears = 2000
 halfsize = 0
 mean_years = (2001, 2011)
+
+# Parameters for the combined climate run
 args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
              run_for_test=run_for_test, output_dir=output_dir, 
              mean_years=mean_years)
@@ -659,7 +680,18 @@ args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2],
              prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
              run_for_test=run_for_test, output_dir=output_dir,
              mean_years=mean_years)
-args_list = [args0, args1, args2]
+
+# Parameters for the single climate bias (precipitation/temperature)
+args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+             run_for_test=run_for_test, output_dir=output_dir,
+             prcp_prefix=prcp_prefix, mean_years=mean_years,
+             output_filesuffix='_Climate2_prcp_single')
+args4 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+             run_for_test=run_for_test, output_dir=output_dir,
+             temp_prefix=temp_prefix, mean_years=mean_years,
+             output_filesuffix='_Climate2_temp_single')
+
+args_list = [args0, args1, args2, args3, args4]
 
 task_num = int(os.environ.get('TASK_ID'))
 run_with_job_array(**args_list[task_num])
