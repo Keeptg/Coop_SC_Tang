@@ -41,7 +41,7 @@ class MyPastMassBalance(MassBalanceModel):
 
     def __init__(self, gdir, mu_star=None, bias=None,
                  filename='climate_historical', input_filesuffix='',
-                 repeat=False, ys=None, ye=None, check_calib_params=True, mean_years=None):
+                 repeat=False, ys=None, ye=None, check_calib_params=True):
         """Initialize.
 
         Parameters
@@ -85,7 +85,7 @@ class MyPastMassBalance(MassBalanceModel):
             consistency with `temp_bias`)
         """
 
-        super(MyPastMassBalance, self).__init__()
+        super(PastMassBalance, self).__init__()
         self.valid_bounds = [-1e4, 2e4]  # in m
         if mu_star is None:
             df = gdir.read_json('local_mustar')
@@ -132,7 +132,6 @@ class MyPastMassBalance(MassBalanceModel):
         self.temp_bias = 0.
         self.prcp_bias = 0.
         self.repeat = repeat
-        self.mean_years = mean_years
 
         # Read file
         fpath = gdir.get_filepath(filename, filesuffix=input_filesuffix)
@@ -216,7 +215,7 @@ class MyPastMassBalance(MassBalanceModel):
 
         # Read timeseries
         itemp = self.temp[pok] + self.temp_bias
-        iprcp = np.clip(self.prcp[pok] + self.prcp_bias, 0, np.nan)
+        iprcp = self.prcp[pok] + self.prcp_bias
         igrad = self.grad[pok]
 
         # For each height pixel:
@@ -250,7 +249,6 @@ class MyPastMassBalance(MassBalanceModel):
         t, tfmelt, prcp, prcpsol = self._get_2d_annual_climate(heights, year)
         return (t.mean(axis=1), tfmelt.sum(axis=1),
                 prcp.sum(axis=1), prcpsol.sum(axis=1))
-    
 
     def get_monthly_mb(self, heights, year=None, **kwargs):
 
@@ -259,42 +257,24 @@ class MyPastMassBalance(MassBalanceModel):
         mb_month -= self.bias * SEC_IN_MONTH / SEC_IN_YEAR
         return mb_month / SEC_IN_MONTH / self.rho
 
-    def get_annual_mb(self, heights, year=None):
+    def get_annual_mb(self, heights, year=None, **kwargs):
 
-        if self.mean_years:
-            mean_years = self.mean_years
-            years = np.arange(mean_years[0], mean_years[1]+1, step=1)
-            temp_lists, prcpsol_lists = [], []
-            for year in years:
-                _, temp2dformelt, _, prcpsol = self._get_2d_annual_climate(heights, year)
-                temp_lists.append(temp2dformelt)
-                prcpsol_lists.append(prcpsol)
-            temp2dformelt = np.mean(temp_lists, axis=0)
-            prcpsol = np.mean(prcpsol_lists, axis=0)
-        else:
-            _, temp2dformelt, _, prcpsol = self._get_2d_annual_climate(heights,
-                                                                    year)
-            
+        _, temp2dformelt, _, prcpsol = self._get_2d_annual_climate(heights,
+                                                                   year)
         mb_annual = np.sum(prcpsol - self.mu_star * temp2dformelt, axis=1)
         return (mb_annual - self.bias) / SEC_IN_YEAR / self.rho
 
 
-class MyRandomMassBalance(MassBalanceModel):
-    """Random shuffle of all MB years within a given time period.
+class MyConstantMassBalance(MassBalanceModel):
+    """Constant mass-balance during a chosen period.
 
-    This is useful for finding a possible past glacier state or for sensitivity
-    experiments.
-
-    Note that this is going to be sensitive to extreme years in certain
-    periods, but it is by far more physically reasonable than other
-    approaches based on gaussian assumptions.
+    This is useful for equilibrium experiments.
     """
 
     def __init__(self, gdir, mu_star=None, bias=None,
-                 y0=None, halfsize=15, seed=None,
-                 filename='climate_historical', input_filesuffix='',
-                 all_years=False, unique_samples=False, mean_years=None):
-        """Initialize.
+                 y0=None, halfsize=15, filename='climate_historical',
+                 input_filesuffix='', **kwargs):
+        """Initialize
 
         Parameters
         ----------
@@ -304,61 +284,49 @@ class MyRandomMassBalance(MassBalanceModel):
             set to the alternative value of mu* you want to use
             (the default is to use the calibrated value)
         bias : float, optional
-            set to the alternative value of the calibration bias [mm we yr-1]
+            set to the alternative value of the annual bias [mm we yr-1]
             you want to use (the default is to use the calibrated value)
-            Note that this bias is *substracted* from the computed MB. Indeed:
-            BIAS = MODEL_MB - REFERENCE_MB.
         y0 : int, optional, default: tstar
             the year at the center of the period of interest. The default
             is to use tstar as center.
         halfsize : int, optional
             the half-size of the time window (window size = 2 * halfsize + 1)
-        seed : int, optional
-            Random seed used to initialize the pseudo-random number generator.
         filename : str, optional
             set to a different BASENAME if you want to use alternative climate
             data.
         input_filesuffix : str
             the file suffix of the input climate file
-        all_years : bool
-            if True, overwrites ``y0`` and ``halfsize`` to use all available
-            years.
-        unique_samples: bool
-            if true, chosen random mass-balance years will only be available
-            once per random climate period-length
-            if false, every model year will be chosen from the random climate
-            period with the same probability
         """
 
-        super(MyRandomMassBalance, self).__init__()
-        self.valid_bounds = [-1e4, 2e4]  # in m
+        super(ConstantMassBalance, self).__init__()
         self.mbmod = MyPastMassBalance(gdir, mu_star=mu_star, bias=bias,
-                                       filename=filename,
-                                       input_filesuffix=input_filesuffix, mean_years=mean_years)
+                                     filename=filename,
+                                     input_filesuffix=input_filesuffix,
+                                     **kwargs)
 
-        # Climate period
-        if all_years:
-            self.years = self.mbmod.years
-        elif mean_years:
-            self.years = np.arange(mean_years[0], mean_years[1]+1, step=1)
-        else:
-            if y0 is None:
-                df = gdir.read_json('local_mustar')
-                y0 = df['t_star']
-            self.years = np.arange(y0-halfsize, y0+halfsize+1)
-        self.yr_range = (self.years[0], self.years[-1]+1)
-        self.ny = len(self.years)
+        if y0 is None:
+            df = gdir.read_json('local_mustar')
+            y0 = df['t_star']
+
+        # This is a quick'n dirty optimisation
+        try:
+            fls = gdir.read_pickle('model_flowlines')
+            h = []
+            for fl in fls:
+                # We use bed because of overdeepenings
+                h = np.append(h, fl.bed_h)
+                h = np.append(h, fl.surface_h)
+            zminmax = np.round([np.min(h)-50, np.max(h)+2000])
+        except FileNotFoundError:
+            # in case we don't have them
+            with ncDataset(gdir.get_filepath('gridded_data')) as nc:
+                zminmax = [nc.min_h_dem-250, nc.max_h_dem+1500]
+        self.hbins = np.arange(*zminmax, step=10)
+        self.valid_bounds = self.hbins[[0, -1]]
+        self.y0 = y0
+        self.halfsize = halfsize
+        self.years = np.arange(y0-halfsize, y0+halfsize+1)
         self.hemisphere = gdir.hemisphere
-
-        # RandomState
-        self.rng = np.random.RandomState(seed)
-        self._state_yr = dict()
-
-        # Sampling without replacement
-        self.unique_samples = unique_samples
-        self.mean_years = mean_years
-        if self.unique_samples:
-            self.sampling_years = self.years
 
     @property
     def temp_bias(self):
@@ -396,46 +364,75 @@ class MyRandomMassBalance(MassBalanceModel):
         """Residual bias to apply to the original series."""
         self.mbmod.bias = value
 
-    def get_state_yr(self, year=None):
-        """For a given year, get the random year associated to it."""
-        year = int(year)
-        if year not in self._state_yr:
-            if self.unique_samples:
-                # --- Sampling without replacement ---
-                if self.sampling_years.size == 0:
-                    # refill sample pool when all years were picked once
-                    self.sampling_years = self.years
-                # choose one year which was not used in the current period
-                _sample = self.rng.choice(self.sampling_years)
-                # write chosen year to dictionary
-                self._state_yr[year] = _sample
-                # update sample pool: remove the chosen year from it
-                self.sampling_years = np.delete(
-                    self.sampling_years,
-                    np.where(self.sampling_years == _sample))
-            else:
-                # --- Sampling with replacement ---
-                self._state_yr[year] = self.rng.randint(*self.yr_range)
-        return self._state_yr[year]
+    @lazy_property
+    def interp_yr(self):
+        # annual MB
+        mb_on_h = self.hbins*0.
+        for yr in self.years:
+            mb_on_h += self.mbmod.get_annual_mb(self.hbins, year=yr)
+        return interp1d(self.hbins, mb_on_h / len(self.years))
+
+    @lazy_property
+    def interp_m(self):
+        # monthly MB
+        months = np.arange(12)+1
+        interp_m = []
+        for m in months:
+            mb_on_h = self.hbins*0.
+            for yr in self.years:
+                yr = date_to_floatyear(yr, m)
+                mb_on_h += self.mbmod.get_monthly_mb(self.hbins, year=yr)
+            interp_m.append(interp1d(self.hbins, mb_on_h / len(self.years)))
+        return interp_m
+
+    def get_climate(self, heights, year=None):
+        """Average climate information at given heights.
+
+        Note that prcp is corrected with the precipitation factor and that
+        all other biases (precipitation, temp) are applied
+
+        Returns
+        -------
+        (temp, tempformelt, prcp, prcpsol)
+        """
+        yrs = monthly_timeseries(self.years[0], self.years[-1],
+                                 include_last_year=True)
+        heights = np.atleast_1d(heights)
+        nh = len(heights)
+        shape = (len(yrs), nh)
+        temp = np.zeros(shape)
+        tempformelt = np.zeros(shape)
+        prcp = np.zeros(shape)
+        prcpsol = np.zeros(shape)
+        for i, yr in enumerate(yrs):
+            t, tm, p, ps = self.mbmod.get_monthly_climate(heights, year=yr)
+            temp[i, :] = t
+            tempformelt[i, :] = tm
+            prcp[i, :] = p
+            prcpsol[i, :] = ps
+        # Note that we do not weight for number of days per month - bad
+        return (np.mean(temp, axis=0),
+                np.mean(tempformelt, axis=0) * 12,
+                np.mean(prcp, axis=0) * 12,
+                np.mean(prcpsol, axis=0) * 12)
 
     def get_monthly_mb(self, heights, year=None, **kwargs):
-        ryr, m = floatyear_to_date(year)
-        ryr = date_to_floatyear(self.get_state_yr(ryr), m)
-        return self.mbmod.get_monthly_mb(heights, year=ryr)
+        yr, m = floatyear_to_date(year)
+        return self.interp_m[m-1](heights)
 
-    def get_annual_mb(self, heights, year=None):
-        ryr = self.get_state_yr(int(year))
-        return self.mbmod.get_annual_mb(heights, year=ryr)
+    def get_annual_mb(self, heights, year=None, **kwargs):
+        return self.interp_yr(heights)
+
+
 
 
 @entity_task(log)
-def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
-                          nyears=1000, y0=None, halfsize=15, mean_years=None,
-                          bias=None, seed=None, store_monthly_step=False,
-                          climate_filename='climate_historical',
-                          climate_input_filesuffix='', output_filesuffix='',
-                          init_model_fls=None, zero_initial_glacier=False,
-                          unique_samples=False, **kwargs):
+def run_my_constant_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
+                            nyears=1000, y0=2005, halfsize=5, bias=None,
+                            store_monthly_step=False, init_model_fls=None, 
+                            climate_filename='climate_historical',
+                            climate_input_filesuffix='', output_filesuffix='',
+                            zero_initial_glacier=False, **kwargs):
     """Runs the random mass-balance model for a given number of years.
 
     This will initialize a
@@ -488,12 +485,10 @@ def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
         kwargs to pass to the FluxBasedModel instance
     """
 
-    mb = MultipleFlowlineMassBalance(gdir, mb_model_class=MyRandomMassBalance,
+    mb = MultipleFlowlineMassBalance(gdir, mb_model_class=MyConstantMassBalance,
                                      y0=y0, halfsize=halfsize,
-                                     bias=bias, seed=seed,
-                                     filename=climate_filename,
-                                     input_filesuffix=climate_input_filesuffix,
-                                     unique_samples=unique_samples, mean_years=mean_years)
+                                     bias=bias, filename=climate_filename,
+                                     input_filesuffix=climate_input_filesuffix)
 
     lat, lon = gdir.cenlat, gdir.cenlon
 
@@ -563,7 +558,7 @@ def pre_process_tasks(run_for_test=False):
 
 
 def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
-                       temp_prefix=None, run_for_test=False, mean_years=None,
+                       temp_prefix=None, run_for_test=False,
                        output_dir=None, output_filesuffix=None):
 
     if output_dir is None:
@@ -574,11 +569,10 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
     gdirs = pre_process_tasks(run_for_test=run_for_test)
     if mtype == 'origin':
         suffix = f'_origin_hf{halfsize}'
-        workflow.execute_entity_task(run_my_random_climate, gdirs, 
-                                     nyears=nyears, y0=y0, seed=1,
+        workflow.execute_entity_task(run_my_constant_climate, gdirs, 
+                                     nyears=nyears, y0=y0,
                                      halfsize=halfsize,
-                                     output_filesuffix=f'_origin_hf{halfsize}',
-                                     mean_years=mean_years)
+                                     output_filesuffix=suffix)
     else:
         if CLIMATE_DATA == '2':
             mtype = '_' + mtype
@@ -594,10 +588,9 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
 
         if output_filesuffix is None:
             output_filesuffix = f'_exper_{mtype}_hf{halfsize}'
-        workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears,
+        workflow.execute_entity_task(run_my_constant_climate, gdirs, nyears=nyears,
                                      y0=y0, seed=1, halfsize=halfsize,
                                      output_filesuffix=output_filesuffix,
-                                     mean_years=mean_years,
                                      fpath_temp_diff=fpath_temp_diff,
                                      fpath_prcp_diff=fpath_prcp_diff)
 
@@ -611,27 +604,23 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
 
 
 def single_node_example(run_for_test=False):
-    y0 = 2008
+    y0 = 2005
     nyears = 100
-    halfsize = 0
-    mean_years = (2002, 2012)
+    halfsize = 5
     mtypes = ['scenew_ctl_3', 'sce_ctl_3']
     outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
     gdirs = pre_process_tasks(run_for_test=run_for_test)
-    workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears,
-                                 y0=y0, seed=1, halfsize=halfsize,
-                                 output_filesuffix=f'_origin_hf{halfsize}',
-                                 mean_years=mean_years)
+    workflow.execute_entity_task(run_my_constant_climate, gdirs, nyears=nyears,
+                                 y0=y0, halfsize=halfsize,
+                                 output_filesuffix=f'_origin_hf{halfsize}')
     for mtype in mtypes:
         fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
         fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
-        workflow.execute_entity_task(run_my_random_climate, gdirs,
-                                     nyears=nyears, y0=y0, seed=1,
-                                     halfsize=halfsize,
+        workflow.execute_entity_task(run_my_constant_climate, gdirs,
+                                     nyears=nyears, y0=y0, halfsize=halfsize,
                                      output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
                                      fpath_temp_diff=fpath_temp_diff,
-                                     fpath_prcp_diff=fpath_prcp_diff,
-                                     mean_years=mean_years)
+                                     fpath_prcp_diff=fpath_prcp_diff)
 
     output_list = []
     suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}',
@@ -663,33 +652,27 @@ elif CLIMATE_DATA == '2':
     output_dir = 'Climate_3'
 
 run_for_test = False
-y0 = 2000
+y0 = 2005
 nyears = 2000
-halfsize = 0
-mean_years = (2001, 2011)
+halfsize = 5
 
 # Parameters for the combined climate run
 args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
-             run_for_test=run_for_test, output_dir=output_dir, 
-             mean_years=mean_years)
+             run_for_test=run_for_test, output_dir=output_dir)
 args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
              prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-             run_for_test=run_for_test, output_dir=output_dir, 
-             mean_years=mean_years)
+             run_for_test=run_for_test, output_dir=output_dir)
 args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
              prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-             run_for_test=run_for_test, output_dir=output_dir,
-             mean_years=mean_years)
+             run_for_test=run_for_test, output_dir=output_dir)
 
 # Parameters for the single climate bias (precipitation/temperature)
 args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
              run_for_test=run_for_test, output_dir=output_dir,
-             prcp_prefix=prcp_prefix, mean_years=mean_years,
-             output_filesuffix='_Climate2_prcp_single')
+             prcp_prefix=prcp_prefix, output_filesuffix='_Climate2_prcp_single')
 args4 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
              run_for_test=run_for_test, output_dir=output_dir,
-             temp_prefix=temp_prefix, mean_years=mean_years,
-             output_filesuffix='_Climate2_temp_single')
+             temp_prefix=temp_prefix, output_filesuffix='_Climate2_temp_single')
 
 args_list = [args0, args1, args2, args3, args4]
 
