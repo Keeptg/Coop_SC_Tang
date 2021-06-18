@@ -41,6 +41,7 @@ class MyPastMassBalance(MassBalanceModel):
 
     def __init__(self, gdir, mu_star=None, bias=None,
                  filename='climate_historical', input_filesuffix='',
+                 fpath_temp_diff=None, fpath_prcp_diff=None,
                  repeat=False, ys=None, ye=None, check_calib_params=True):
         """Initialize.
 
@@ -85,7 +86,7 @@ class MyPastMassBalance(MassBalanceModel):
             consistency with `temp_bias`)
         """
 
-        super(PastMassBalance, self).__init__()
+        super(MyPastMassBalance, self).__init__()
         self.valid_bounds = [-1e4, 2e4]  # in m
         if mu_star is None:
             df = gdir.read_json('local_mustar')
@@ -298,7 +299,7 @@ class MyConstantMassBalance(MassBalanceModel):
             the file suffix of the input climate file
         """
 
-        super(ConstantMassBalance, self).__init__()
+        super(MyConstantMassBalance, self).__init__()
         self.mbmod = MyPastMassBalance(gdir, mu_star=mu_star, bias=bias,
                                      filename=filename,
                                      input_filesuffix=input_filesuffix,
@@ -503,7 +504,7 @@ def run_my_constant_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
         mb.temp_bias = temp_diff.tas.values
 
     return robust_model_run(gdir, output_filesuffix=output_filesuffix,
-                            mb_model=mb, ys=ys, ye=nyears,
+                            mb_model=mb, ys=y0, ye=nyears,
                             store_monthly_step=store_monthly_step,
                             init_model_fls=init_model_fls,
                             zero_initial_glacier=zero_initial_glacier,
@@ -621,7 +622,7 @@ def single_node_example(run_for_test=False):
                 assert os.path.exists(fpath_prcp_diff)
                 assert os.path.exists(fpath_temp_diff)
                 for gdir in gdirs:
-                    run_my_constant_climate(gdirs, nyears=nyears, y0=y0,
+                    run_my_constant_climate(gdir, nyears=nyears, y0=y0,
                                             halfsize=halfsize,
                                             output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
                                             fpath_temp_diff=fpath_temp_diff,
