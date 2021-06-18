@@ -215,7 +215,7 @@ class MyPastMassBalance(MassBalanceModel):
 
         # Read timeseries
         itemp = self.temp[pok] + self.temp_bias
-        iprcp = self.prcp[pok] + self.prcp_bias
+        iprcp = np.clip(self.prcp[pok] + self.prcp_bias, 0, np.nan)
         igrad = self.grad[pok]
 
         # For each height pixel:
@@ -503,7 +503,7 @@ def run_my_constant_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
         mb.temp_bias = temp_diff.tas.values
 
     return robust_model_run(gdir, output_filesuffix=output_filesuffix,
-                            mb_model=mb, ys=0, ye=nyears,
+                            mb_model=mb, ys=ys, ye=nyears,
                             store_monthly_step=store_monthly_step,
                             init_model_fls=init_model_fls,
                             zero_initial_glacier=zero_initial_glacier,
@@ -651,10 +651,11 @@ elif CLIMATE_DATA == '2':
     temp_prefix = 'T2m_diff'
     output_dir = 'Climate_3'
 
-run_for_test = False
+run_for_test = True
 y0 = 2005
 nyears = 2000
 halfsize = 5
+output_dir = 'test_MyConstantMassBalance'
 
 # Parameters for the combined climate run
 args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
