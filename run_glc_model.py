@@ -610,17 +610,36 @@ def single_node_example(run_for_test=False):
     mtypes = ['scenew_ctl_3', 'sce_ctl_3']
     outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
     gdirs = pre_process_tasks(run_for_test=run_for_test)
-    workflow.execute_entity_task(run_my_constant_climate, gdirs, nyears=nyears,
-                                 y0=y0, halfsize=halfsize,
-                                 output_filesuffix=f'_origin_hf{halfsize}')
-    for mtype in mtypes:
-        fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
-        fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
-        workflow.execute_entity_task(run_my_constant_climate, gdirs,
-                                     nyears=nyears, y0=y0, halfsize=halfsize,
-                                     output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
-                                     fpath_temp_diff=fpath_temp_diff,
-                                     fpath_prcp_diff=fpath_prcp_diff)
+    if run_for_test:
+        cfg.PARAMS['continue_on_error'] = False
+        for gdir in gdirs:
+            run_my_constant_climate(gdir, nyears=nyears, y0=y0, halfsize=halfsize,
+                                    output_filesuffix=f'_origin_hf{halfsize}')
+            for mtype in mtypes:
+                fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
+                fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
+                assert os.path.exists(fpath_prcp_diff)
+                assert os.path.exists(fpath_temp_diff)
+                for gdir in gdirs:
+                    run_my_constant_climate(gdirs, nyears=nyears, y0=y0,
+                                            halfsize=halfsize,
+                                            output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
+                                            fpath_temp_diff=fpath_temp_diff,
+                                            fpath_prcp_diff=fpath_prcp_diff)
+    else:
+        workflow.execute_entity_task(run_my_constant_climate, gdirs, nyears=nyears,
+                                    y0=y0, halfsize=halfsize,
+                                    output_filesuffix=f'_origin_hf{halfsize}')
+        for mtype in mtypes:
+            fpath_prcp_diff = os.path.join(data_dir, f'Precip_diff_{mtype}.nc')
+            fpath_temp_diff = os.path.join(data_dir, f'T2m_diff_{mtype}.nc')
+            assert os.path.exists(fpath_prcp_diff)
+            assert os.path.exists(fpath_temp_diff)
+            workflow.execute_entity_task(run_my_constant_climate, gdirs,
+                                        nyears=nyears, y0=y0, halfsize=halfsize,
+                                        output_filesuffix=f'_exper_{mtype}_hf{halfsize}',
+                                        fpath_temp_diff=fpath_temp_diff,
+                                        fpath_prcp_diff=fpath_prcp_diff)
 
     output_list = []
     suffixes = [f'_origin_hf{halfsize}', f'_exper_{mtypes[0]}_hf{halfsize}',
@@ -657,28 +676,29 @@ nyears = 2000
 halfsize = 5
 output_dir = 'test_MyConstantMassBalance'
 
-# Parameters for the combined climate run
-args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
-             run_for_test=run_for_test, output_dir=output_dir)
-args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
-             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-             run_for_test=run_for_test, output_dir=output_dir)
-args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-             run_for_test=run_for_test, output_dir=output_dir)
-
-# Parameters for the single climate bias (precipitation/temperature)
-args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-             run_for_test=run_for_test, output_dir=output_dir,
-             prcp_prefix=prcp_prefix, output_filesuffix='_Climate2_prcp_single')
-args4 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-             run_for_test=run_for_test, output_dir=output_dir,
-             temp_prefix=temp_prefix, output_filesuffix='_Climate2_temp_single')
-
-args_list = [args0, args1, args2, args3, args4]
-
-task_num = int(os.environ.get('TASK_ID'))
-run_with_job_array(**args_list[task_num])
+single_node_example(run_for_test=True)
+## Parameters for the combined climate run
+#args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
+#             run_for_test=run_for_test, output_dir=output_dir)
+#args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
+#             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+#             run_for_test=run_for_test, output_dir=output_dir)
+#args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+#             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+#             run_for_test=run_for_test, output_dir=output_dir)
+#
+## Parameters for the single climate bias (precipitation/temperature)
+#args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+#             run_for_test=run_for_test, output_dir=output_dir,
+#             prcp_prefix=prcp_prefix, output_filesuffix='_Climate2_prcp_single')
+#args4 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+#             run_for_test=run_for_test, output_dir=output_dir,
+#             temp_prefix=temp_prefix, output_filesuffix='_Climate2_temp_single')
+#
+#args_list = [args0, args1, args2, args3, args4]
+#
+#task_num = int(os.environ.get('TASK_ID'))
+#run_with_job_array(**args_list[task_num])
 
 
 
