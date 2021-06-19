@@ -669,7 +669,7 @@ def single_node_example(run_for_test=False, plot=True):
 
     
 global CLIMATE_DATA
-run_for_test = True
+run_for_test = False
 
 if not run_in_cluster:
     single_node_example(run_for_test=run_for_test)
@@ -689,7 +689,7 @@ else:
     y0 = 2005
     nyears = 2000
     halfsize = 5
-    output_dir = 'test_MyConstantMassBalance'
+    output_dir = 'use_ConstantMassBalance_' + output_dir
 
     # Parameters for the combined climate run
     args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
