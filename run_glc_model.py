@@ -587,8 +587,8 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
 
         if output_filesuffix is None:
             output_filesuffix = f'_exper_{mtype}_hf{halfsize}'
-        workflow.execute_entity_task(run_my_constant_climate, gdirs, repeat=nyears,
-                                     y0=y0, seed=1, halfsize=halfsize,
+        workflow.execute_entity_task(run_my_constant_climate, gdirs, nyears=nyears,
+                                     y0=y0, halfsize=halfsize,
                                      output_filesuffix=output_filesuffix,
                                      fpath_temp_diff=fpath_temp_diff,
                                      fpath_prcp_diff=fpath_prcp_diff)
