@@ -567,11 +567,11 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
                               reset=False)
     gdirs = pre_process_tasks(run_for_test=run_for_test)
     if mtype == 'origin':
-        suffix = f'_origin_hf{halfsize}'
+        output_suffix = f'_origin_hf{halfsize}'
         workflow.execute_entity_task(run_my_constant_climate, gdirs, 
                                      nyears=nyears, y0=y0,
                                      halfsize=halfsize,
-                                     output_filesuffix=suffix)
+                                     output_filesuffix=output_suffix)
     else:
         if CLIMATE_DATA == '2':
             mtype = '_' + mtype
@@ -693,13 +693,13 @@ else:
 
     # Parameters for the combined climate run
     args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
-                run_for_test=run_for_test, output_dir=output_dir)
+                 run_for_test=run_for_test, output_dir=output_dir)
     args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
-                prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+                 prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
                 run_for_test=run_for_test, output_dir=output_dir)
     args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-                prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-                run_for_test=run_for_test, output_dir=output_dir)
+                 prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+                 run_for_test=run_for_test, output_dir=output_dir)
 
     # Parameters for the single climate bias (precipitation/temperature)
     args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
