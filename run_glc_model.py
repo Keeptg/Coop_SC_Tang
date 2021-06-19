@@ -567,11 +567,11 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
                               reset=False)
     gdirs = pre_process_tasks(run_for_test=run_for_test)
     if mtype == 'origin':
-        output_suffix = f'_origin_hf{halfsize}'
+        output_filesuffix = f'_origin_hf{halfsize}'
         workflow.execute_entity_task(run_my_constant_climate, gdirs, 
                                      nyears=nyears, y0=y0,
                                      halfsize=halfsize,
-                                     output_filesuffix=output_suffix)
+                                     output_filesuffix=output_filesuffix)
     else:
         if CLIMATE_DATA == '2':
             mtype = '_' + mtype
