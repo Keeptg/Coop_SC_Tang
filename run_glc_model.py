@@ -32,8 +32,8 @@ def get_clim_bias(gdir, fpath_prcp_diff, fpath_temp_diff):
     lat, lon = gdir.cenlat, gdir.cenlon
     prcp_diff = prcp_diff_ds.sel(lat=lat, lon=lon, method='nearest')
     temp_diff = temp_diff_ds.sel(lat=lat, lon=lon, method='nearest')
-    gdir.prcp_diff = prcp_diff.pr.values
-    gdir.temp_diff = temp_diff.tas.values
+    
+    return prcp_diff.pr.values, temp_diff.tas.values
 
 
 class MyPastMassBalance(MassBalanceModel):
@@ -41,7 +41,6 @@ class MyPastMassBalance(MassBalanceModel):
 
     def __init__(self, gdir, mu_star=None, bias=None,
                  filename='climate_historical', input_filesuffix='',
-                 fpath_temp_diff=None, fpath_prcp_diff=None,
                  repeat=False, ys=None, ye=None, check_calib_params=True):
         """Initialize.
 
@@ -487,7 +486,7 @@ def run_my_constant_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
     """
 
     mb = MultipleFlowlineMassBalance(gdir, mb_model_class=MyConstantMassBalance,
-                                     y0=y0, halfsize=halfsize,
+                                     y0=y0, halfsize=halfsize, repeat=nyears,
                                      bias=bias, filename=climate_filename,
                                      input_filesuffix=climate_input_filesuffix)
 
@@ -504,9 +503,8 @@ def run_my_constant_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
         mb.temp_bias = temp_diff.tas.values
 
     return robust_model_run(gdir, output_filesuffix=output_filesuffix,
-                            mb_model=mb, ys=y0, ye=nyears,
-                            store_monthly_step=store_monthly_step,
-                            init_model_fls=init_model_fls,
+                            mb_model=mb, store_monthly_step=store_monthly_step,
+                            init_model_fls=init_model_fls, ys=0, ye=nyears,
                             zero_initial_glacier=zero_initial_glacier,
                             **kwargs)
 
@@ -589,7 +587,7 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
 
         if output_filesuffix is None:
             output_filesuffix = f'_exper_{mtype}_hf{halfsize}'
-        workflow.execute_entity_task(run_my_constant_climate, gdirs, nyears=nyears,
+        workflow.execute_entity_task(run_my_constant_climate, gdirs, repeat=nyears,
                                      y0=y0, seed=1, halfsize=halfsize,
                                      output_filesuffix=output_filesuffix,
                                      fpath_temp_diff=fpath_temp_diff,
@@ -604,7 +602,7 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
     ds.load().to_netcdf(path=os.path.join(outpath, 'result'+output_filesuffix+'.nc'))
 
 
-def single_node_example(run_for_test=False):
+def single_node_example(run_for_test=False, plot=True):
     y0 = 2005
     nyears = 100
     halfsize = 5
@@ -649,75 +647,69 @@ def single_node_example(run_for_test=False):
         path = os.path.join(outpath, 'result'+suffix+'.nc')
         output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
                                                     path=path, use_compression=True))
-    
-    # TODO: Test!
-    a = output_list[0].volume.values
-    print(a[-1, 2])
+    if run_for_test and plot:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(3, 1)
+        ylabels = ['Volume (km3)', 'Area (km2)', 'ELA (m)']
+        colors = ['black', 'red', 'blue']
+        for i, label in enumerate(['Origin', 'Exper1', 'Exper2']):
+            ds = output_list[i]
+            volumes = ds.isel(rgi_id=0).volume.values * 1e-9
+            areas = ds.isel(rgi_id=0).area.values * 1e-6
+            elas = ds.isel(rgi_id=0).ela.values
+            ax[0].plot(range(len(volumes)), volumes, color=colors[i], label=label)
+            ax[1].plot(range(len(areas)), areas, color=colors[i])
+            ax[2].plot(range(len(elas)), elas, color=colors[i])
+        
+        ax[0].set_ylabel(ylabels[0])
+        ax[1].set_ylabel(ylabels[1])
+        ax[2].set_ylabel(ylabels[2])
+        ax[0].legend()
+        plt.tight_layout()
 
     
-# single_node_example()
-
 global CLIMATE_DATA
-
-CLIMATE_DATA = '1'
-if CLIMATE_DATA == '1':
-    mtypes = ['origin', '1', '2']
-    prcp_prefix = 'prec_diff'
-    temp_prefix = 'temp_diff'
-    output_dir = 'Climate1_2'
-elif CLIMATE_DATA == '2':
-    mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
-    prcp_prefix = 'Precip_diff'
-    temp_prefix = 'T2m_diff'
-    output_dir = 'Climate_3'
-
 run_for_test = True
-y0 = 2005
-nyears = 2000
-halfsize = 5
-output_dir = 'test_MyConstantMassBalance'
 
-single_node_example(run_for_test=True)
-## Parameters for the combined climate run
-#args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
-#             run_for_test=run_for_test, output_dir=output_dir)
-#args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
-#             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-#             run_for_test=run_for_test, output_dir=output_dir)
-#args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-#             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-#             run_for_test=run_for_test, output_dir=output_dir)
-#
-## Parameters for the single climate bias (precipitation/temperature)
-#args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-#             run_for_test=run_for_test, output_dir=output_dir,
-#             prcp_prefix=prcp_prefix, output_filesuffix='_Climate2_prcp_single')
-#args4 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-#             run_for_test=run_for_test, output_dir=output_dir,
-#             temp_prefix=temp_prefix, output_filesuffix='_Climate2_temp_single')
-#
-#args_list = [args0, args1, args2, args3, args4]
-#
-#task_num = int(os.environ.get('TASK_ID'))
-#run_with_job_array(**args_list[task_num])
+if not run_in_cluster:
+    single_node_example(run_for_test=run_for_test)
+else:
+    CLIMATE_DATA = '1'
+    if CLIMATE_DATA == '1':
+        mtypes = ['origin', '1', '2']
+        prcp_prefix = 'prec_diff'
+        temp_prefix = 'temp_diff'
+        output_dir = 'Climate1_2'
+    elif CLIMATE_DATA == '2':
+        mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
+        prcp_prefix = 'Precip_diff'
+        temp_prefix = 'T2m_diff'
+        output_dir = 'Climate_3'
 
+    y0 = 2005
+    nyears = 2000
+    halfsize = 5
+    output_dir = 'test_MyConstantMassBalance'
 
+    # Parameters for the combined climate run
+    args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
+                run_for_test=run_for_test, output_dir=output_dir)
+    args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
+                prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+                run_for_test=run_for_test, output_dir=output_dir)
+    args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+                prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+                run_for_test=run_for_test, output_dir=output_dir)
 
+    # Parameters for the single climate bias (precipitation/temperature)
+    args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+                run_for_test=run_for_test, output_dir=output_dir,
+                prcp_prefix=prcp_prefix, output_filesuffix='_Climate2_prcp_single')
+    args4 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+                run_for_test=run_for_test, output_dir=output_dir,
+                temp_prefix=temp_prefix, output_filesuffix='_Climate2_temp_single')
 
+    args_list = [args0, args1, args2, args3, args4]
 
-#import matplotlib.pyplot as plt
-#fig, ax = plt.subplots(1, 3)
-#ylabels = ['Volume (km3)', 'Area (km2)', 'ELA (m)']
-#colors = ['black', 'red', 'blue']
-#for i, label in enumerate(['Origin', 'Exper1', 'Exper1']):
-#    ds = output_list[i]
-#    volumes = ds.isel(rgi_id=0).volume.values * 1e-9
-#    areas = ds.isel(rgi_id=0).area.values * 1e-6
-#    elas = ds.isel(rgi_id=0).ela.values
-#    ax[0].plot(range(len(volumes)), volumes, color=colors[i])
-#    ax[1].plot(range(len(areas)), areas, color=colors[i])
-#    ax[2].plot(range(len(elas)), elas, color=colors[i])
-#
-#ax[0].set_ylabel(ylabels[0])
-#ax[1].set_ylabel(ylabels[1])
-#ax[2].set_ylabel(ylabels[2])
+    task_num = int(os.environ.get('TASK_ID'))
+    run_with_job_array(**args_list[task_num])
