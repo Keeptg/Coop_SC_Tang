@@ -106,7 +106,53 @@ def write_climate_diff2nc(file_name, var_name, prcp_units=None, temp_units=None,
     var_ds.to_netcdf(os.path.join(data_dir, f'{var_name}{suffix}.nc'))
 
 
-write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_sce_ctl', suffix='3')
-write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_sce_ctl', suffix='3')
-write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_scenew_ctl', suffix='3')
-write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_scenew_ctl', suffix='3')
+def write_climate99_nc(var_name, outpath=None,
+                       transform_method=None, long_name=None, group='ctl', savefile=True):
+    """
+    """
+
+    fpath = os.path.join(data_dir, 'Climate2_99years')
+    latlon_dict = mat73.loadmat(os.path.join(fpath, 'Climate2_99years_latlon.mat'))
+    lat = latlon_dict['lat']
+    lon = latlon_dict['lon']
+    fname = f'Climate2_99years_{var_name}_{group}.mat'
+    path = os.path.join(fpath, fname)
+    data = mat73.loadmat(path)
+    data1 = data[f'{var_name}_{group}']
+    if var_name == 'PrecipMean':
+        month_data1 = np.array([data1[:, :, i:i+11, :].sum(axis=2)
+                                for i in range(0, 360, 30)])
+        units = 'mm/month'
+    elif var_name == 'T2mMean':
+        month_data1 = np.array([data1[:, :, i:i+11, :].mean(axis=2)
+                                for i in range(0, 360, 30)])
+        units = 'K'
+    month_data2 = []
+    for year in range(0, 99):
+        for month in range(0, 12):
+            month_data2.append(month_data1[month, :, :, year])
+    month_data2 = np.array(month_data2)
+    time = pd.date_range('1/15/2001', periods=99*12, freq='M')
+    mons_data = xr.Dataset({var_name: (['time', 'lon', 'lat'], month_data2)},
+                           coords=dict(time=time, lon=lon, lat=lat),
+                           attrs=dict(units=units, long_name=fname))
+    if savefile:
+        if outpath is None:
+            outpath = fpath
+        mons_data.to_netcdf(os.path.join(outpath, f'Climate2_99years_{var_name}_{group}.nc'))
+
+    return mons_data
+
+
+def main_Cliamte3():
+    write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_sce_ctl', suffix='3')
+    write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_sce_ctl', suffix='3')
+    write_climate_diff2nc(file_name='Climate3.mat', var_name='Precip_diff_scenew_ctl', suffix='3')
+    write_climate_diff2nc(file_name='Climate3.mat', var_name='T2m_diff_scenew_ctl', suffix='3')
+
+
+def main_Climate99():
+    pr_ctl = write_climate99_nc(var_name='PrecipMean', group='ctl')
+    tm_ctl = write_climate99_nc(var_name='T2mMean', group='ctl')
+    pr_sce = write_climate99_nc(var_name='PrecipMean', group='sce')
+    tm_sce = write_climate99_nc(var_name='T2mMean', group='sce')
