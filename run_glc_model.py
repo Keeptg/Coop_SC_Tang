@@ -672,7 +672,7 @@ def single_node_example(run_for_test=False, from_prepro_level=1):
         ax[2].set_ylabel(ylabels[2])
 
 
-run_for_test = True
+run_for_test = False
 if not run_in_cluster:    
     single_node_example(run_for_test, from_prepro_level=4)
 else:
