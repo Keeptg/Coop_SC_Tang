@@ -579,11 +579,11 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
     gdirs = pre_process_tasks(run_for_test=run_for_test,
                               from_prepro_level=from_prepro_level)
     if mtype == 'origin':
-        suffix = f'_origin_hf{halfsize}'
+        output_filesuffix = f'_origin_hf{halfsize}'
         workflow.execute_entity_task(run_my_random_climate, gdirs, 
                                      nyears=nyears, y0=y0, seed=1,
                                      halfsize=halfsize,
-                                     output_filesuffix=suffix,
+                                     output_filesuffix=output_filesuffix,
                                      mean_years=mean_years)
     else:
         if CLIMATE_DATA == '2':
