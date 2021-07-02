@@ -509,7 +509,7 @@ def run_my_constant_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
                             **kwargs)
 
 
-def pre_process_tasks(run_for_test=False):
+def pre_process_tasks(run_for_test=False, border=160, from_prepro_level=1):
 
     path10 = utils.get_rgi_region_file('10', '61')
     path13 = utils.get_rgi_region_file('13', '61')
@@ -524,12 +524,12 @@ def pre_process_tasks(run_for_test=False):
     if (not run_in_cluster) or run_for_test:
         rgidf = rgidf10.iloc[0:5, :]
     cfg.initialize()
-    cfg.PARAMS['border'] = 160
+    cfg.PARAMS['border'] = border
     cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
     cfg.PARAMS['continue_on_error'] = True
     cfg.PARAMS['use_multiprocessing'] = True
 
-    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1,
+    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=from_prepro_level,
                                               reset=True, force=True)
     task_list = [
         tasks.define_glacier_region,
@@ -669,7 +669,7 @@ def single_node_example(run_for_test=False, plot=True):
 
     
 global CLIMATE_DATA
-run_for_test = False
+run_for_test = True
 
 if not run_in_cluster:
     single_node_example(run_for_test=run_for_test)
