@@ -515,7 +515,7 @@ def run_my_random_climate(gdir, fpath_prcp_diff=None, fpath_temp_diff=None,
                             **kwargs)
 
 
-def pre_process_tasks(run_for_test=False):
+def pre_process_tasks(run_for_test=False, from_prepro_level=4, border=160):
 
     path10 = utils.get_rgi_region_file('10', '61')
     path13 = utils.get_rgi_region_file('13', '61')
@@ -528,56 +528,62 @@ def pre_process_tasks(run_for_test=False):
     rgidf15 = gpd.read_file(path15)
     rgidf = pd.concat([rgidf10, rgidf13, rgidf14, rgidf15])
     if (not run_in_cluster) or run_for_test:
-        rgidf = rgidf10.iloc[0:5, :]
+        rgidf = rgidf10.iloc[0:50, :]
     cfg.initialize()
-    cfg.PARAMS['border'] = 160
+    cfg.PARAMS['border'] = border
     cfg.PATHS['working_dir'] = utils.mkdir(working_dir)
     cfg.PARAMS['continue_on_error'] = True
     cfg.PARAMS['use_multiprocessing'] = True
 
-    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=1,
+    gdirs = workflow.init_glacier_directories(rgidf, from_prepro_level=from_prepro_level,
                                               reset=True, force=True)
-    task_list = [
-        tasks.define_glacier_region,
-        tasks.glacier_masks,
-        tasks.compute_centerlines,
-        tasks.initialize_flowlines,
-        tasks.compute_downstream_line,
-        tasks.compute_downstream_bedshape, 
-        tasks.catchment_area,
-        tasks.catchment_intersections,
-        tasks.catchment_width_geom,
-        tasks.catchment_width_correction,
-        tasks.process_cru_data,
-        tasks.local_t_star,
-        tasks.mu_star_calibration,
-        tasks.prepare_for_inversion,
-        tasks.mass_conservation_inversion,
-        tasks.filter_inversion_output, 
-        tasks.init_present_time_glacier
-    ]
-    for task in task_list:
-        workflow.execute_entity_task(task, gdirs)
+    if from_prepro_level == 1:
+        task_list = [
+            tasks.define_glacier_region,
+            tasks.glacier_masks,
+            tasks.compute_centerlines,
+            tasks.initialize_flowlines,
+            tasks.compute_downstream_line,
+            tasks.compute_downstream_bedshape, 
+            tasks.catchment_area,
+            tasks.catchment_intersections,
+            tasks.catchment_width_geom,
+            tasks.catchment_width_correction,
+            tasks.process_cru_data,
+            tasks.local_t_star,
+            tasks.mu_star_calibration,
+            tasks.prepare_for_inversion,
+            tasks.mass_conservation_inversion,
+            tasks.filter_inversion_output, 
+            tasks.init_present_time_glacier
+        ]
+        for task in task_list:
+            workflow.execute_entity_task(task, gdirs)
+    elif from_prepro_level == 4:
+        pass
+    else:
+        raise ValueError(f"Unexcepted from_prepro_level {from_prepro_level}!")
 
     return gdirs
 
 
 def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
                        temp_prefix=None, run_for_test=False, mean_years=None,
-                       output_dir=None, output_filesuffix=None):
+                       output_dir=None, output_filesuffix=None, from_prepro_level=1):
 
     if output_dir is None:
         outpath = utils.mkdir(cluster_dir, reset=False)
     else:
         outpath = utils.mkdir(os.path.join(cluster_dir, output_dir),
                               reset=False)
-    gdirs = pre_process_tasks(run_for_test=run_for_test)
+    gdirs = pre_process_tasks(run_for_test=run_for_test,
+                              from_prepro_level=from_prepro_level)
     if mtype == 'origin':
         suffix = f'_origin_hf{halfsize}'
         workflow.execute_entity_task(run_my_random_climate, gdirs, 
                                      nyears=nyears, y0=y0, seed=1,
                                      halfsize=halfsize,
-                                     output_filesuffix=f'_origin_hf{halfsize}',
+                                     output_filesuffix=suffix,
                                      mean_years=mean_years)
     else:
         if CLIMATE_DATA == '2':
@@ -610,14 +616,15 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
     ds.load().to_netcdf(path=os.path.join(outpath, 'result'+output_filesuffix+'.nc'))
 
 
-def single_node_example(run_for_test=False):
+def single_node_example(run_for_test=False, from_prepro_level=1):
     y0 = 2008
     nyears = 100
     halfsize = 0
     mean_years = (2002, 2012)
     mtypes = ['scenew_ctl_3', 'sce_ctl_3']
     outpath = utils.mkdir(os.path.join(cluster_dir, 'Climate_3'))
-    gdirs = pre_process_tasks(run_for_test=run_for_test)
+    gdirs = pre_process_tasks(run_for_test=run_for_test,
+                              from_prepro_level=from_prepro_level)
     workflow.execute_entity_task(run_my_random_climate, gdirs, nyears=nyears,
                                  y0=y0, seed=1, halfsize=halfsize,
                                  output_filesuffix=f'_origin_hf{halfsize}',
@@ -641,78 +648,85 @@ def single_node_example(run_for_test=False):
         output_list.append(utils.compile_run_output(gdirs, input_filesuffix=suffix, 
                                                     path=path, use_compression=True))
     
-    # TODO: Test!
-    a = output_list[0].volume.values
-    print(a[-1, 2])
-
-    
-# single_node_example()
-
-global CLIMATE_DATA
-
-CLIMATE_DATA = '1'
-if CLIMATE_DATA == '1':
-    mtypes = ['origin', '1', '2']
-    prcp_prefix = 'prec_diff'
-    temp_prefix = 'temp_diff'
-    output_dir = 'Climate1_2'
-elif CLIMATE_DATA == '2':
-    mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
-    prcp_prefix = 'Precip_diff'
-    temp_prefix = 'T2m_diff'
-    output_dir = 'Climate_3'
-
-run_for_test = False
-y0 = 2000
-nyears = 2000
-halfsize = 0
-mean_years = (2001, 2011)
-
-# Parameters for the combined climate run
-args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
-             run_for_test=run_for_test, output_dir=output_dir, 
-             mean_years=mean_years)
-args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
-             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-             run_for_test=run_for_test, output_dir=output_dir, 
-             mean_years=mean_years)
-args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-             prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
-             run_for_test=run_for_test, output_dir=output_dir,
-             mean_years=mean_years)
-
-# Parameters for the single climate bias (precipitation/temperature)
-args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-             run_for_test=run_for_test, output_dir=output_dir,
-             prcp_prefix=prcp_prefix, mean_years=mean_years,
-             output_filesuffix='_Climate2_prcp_single')
-args4 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
-             run_for_test=run_for_test, output_dir=output_dir,
-             temp_prefix=temp_prefix, mean_years=mean_years,
-             output_filesuffix='_Climate2_temp_single')
-
-args_list = [args0, args1, args2, args3, args4]
-
-task_num = int(os.environ.get('TASK_ID'))
-run_with_job_array(**args_list[task_num])
+    if run_for_test and (not run_in_cluster):
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(3, 1)
+        ylabels = ['Volume (km3)', 'Area (km2)', 'lenght (m)']
+        colors = ['black', 'red', 'blue']
+        for i, label in enumerate(['Origin', 'Exper1', 'Exper2']):
+            ds = output_list[i]
+            volumes = ds.volume.sum(dim='rgi_id').values * 1e-9
+            areas = ds.area.sum(dim='rgi_id').values * 1e-6
+            elas = ds.length.sum(dim='rgi_id').values
+            ax[0].plot(range(len(volumes)), volumes, color=colors[i], label=label)
+            ax[1].plot(range(len(areas)), areas, color=colors[i])
+            ax[2].plot(range(len(elas)), elas, color=colors[i])
+        ax[0].legend()
+        ax[0].set_ylabel(ylabels[0])
+        ax[1].set_ylabel(ylabels[1])
+        ax[2].set_ylabel(ylabels[2])
 
 
+run_for_test = True
+if not run_in_cluster:    
+    single_node_example(run_for_test, from_prepro_level=4)
+else:
+    global CLIMATE_DATA
 
+    CLIMATE_DATA = '1'
+    if CLIMATE_DATA == '1':
+        mtypes = ['origin', '1', '2']
+        prcp_prefix = 'prec_diff'
+        temp_prefix = 'temp_diff'
+        output_dir = 'Climate1_2'
+    elif CLIMATE_DATA == '2':
+        mtypes = ['origin', 'scenew_ctl_3', 'sce_ctl_3']
+        prcp_prefix = 'Precip_diff'
+        temp_prefix = 'T2m_diff'
+        output_dir = 'Climate_3'
 
+    y0 = 2000
+    nyears = 2000
+    halfsize = 0
+    mean_years = (2001, 2011)
 
-#import matplotlib.pyplot as plt
-#fig, ax = plt.subplots(1, 3)
-#ylabels = ['Volume (km3)', 'Area (km2)', 'ELA (m)']
-#colors = ['black', 'red', 'blue']
-#for i, label in enumerate(['Origin', 'Exper1', 'Exper1']):
-#    ds = output_list[i]
-#    volumes = ds.isel(rgi_id=0).volume.values * 1e-9
-#    areas = ds.isel(rgi_id=0).area.values * 1e-6
-#    elas = ds.isel(rgi_id=0).ela.values
-#    ax[0].plot(range(len(volumes)), volumes, color=colors[i])
-#    ax[1].plot(range(len(areas)), areas, color=colors[i])
-#    ax[2].plot(range(len(elas)), elas, color=colors[i])
-#
-#ax[0].set_ylabel(ylabels[0])
-#ax[1].set_ylabel(ylabels[1])
-#ax[2].set_ylabel(ylabels[2])
+    # Parameters for the combined climate run
+    args0 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
+                run_for_test=run_for_test, output_dir=output_dir, 
+                mean_years=mean_years)
+    args1 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
+                prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+                run_for_test=run_for_test, output_dir=output_dir, 
+                mean_years=mean_years)
+    args2 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+                prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+                run_for_test=run_for_test, output_dir=output_dir,
+                mean_years=mean_years)
+
+    # Parameters for the single climate bias (precipitation/temperature)
+    args3 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+                run_for_test=run_for_test, output_dir=output_dir,
+                prcp_prefix=prcp_prefix, mean_years=mean_years,
+                output_filesuffix='_Climate2_prcp_single')
+    args4 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+                run_for_test=run_for_test, output_dir=output_dir,
+                temp_prefix=temp_prefix, mean_years=mean_years,
+                output_filesuffix='_Climate2_temp_single')
+
+    # Parameters for the combined climate run but from preprolevel=4
+    args5 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[0], 
+                run_for_test=run_for_test, output_dir=output_dir+'preprolevel4', 
+                mean_years=mean_years, from_prepro_level=4)
+    args6 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[1], 
+                prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+                run_for_test=run_for_test, output_dir=output_dir+'preprolevel4', 
+                mean_years=mean_years, from_prepro_level=4)
+    args7 = dict(y0=y0, nyears=nyears, halfsize=halfsize, mtype=mtypes[2], 
+                prcp_prefix=prcp_prefix, temp_prefix=temp_prefix, 
+                run_for_test=run_for_test, output_dir=output_dir+'preprolevel4',
+                mean_years=mean_years, from_prepro_level=4)
+
+    args_list = [args0, args1, args2, args3, args4, args5, args6, args7]
+
+    task_num = int(os.environ.get('TASK_ID'))
+    run_with_job_array(**args_list[task_num])
