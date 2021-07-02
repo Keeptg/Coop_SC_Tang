@@ -4,6 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --exclusive
 #SBATCH --time=48:00:00
+#SBATCH --qos=low
 #SBATCH --mail-user=lifei@itpcas.ac.cn
 #SBATCH --mail-type=ALL
 #SBATCH --array=0-2

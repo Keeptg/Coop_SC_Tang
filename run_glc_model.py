@@ -612,8 +612,13 @@ def run_with_job_array(y0, nyears, halfsize, mtype, prcp_prefix=None,
     # https://github.com/OGGM/oggm/pull/1122 and 
     # https://github.com/pydata/xarray/issues/4710
     print(f"Save result{output_filesuffix}.nc")
+    enc_var = {'dtype': 'float32'}
+    enc_var['complevel'] = 5
+    enc_var['zlib'] = True
+    encoding = {v: enc_var for v in ds.data_vars}
 
-    ds.load().to_netcdf(path=os.path.join(outpath, 'result'+output_filesuffix+'.nc'))
+    ds.load().to_netcdf(path=os.path.join(outpath, 'result'+output_filesuffix+'.nc'),
+                        encoding=encoding)
 
 
 def single_node_example(run_for_test=False, from_prepro_level=1):
