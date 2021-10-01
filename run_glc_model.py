@@ -674,7 +674,7 @@ def single_node_example(run_for_test=False, from_prepro_level=1):
 
 run_for_test = False
 if not run_in_cluster:    
-    single_node_example(run_for_test, from_prepro_level=4)
+    single_node_example(run_for_test, from_prepro_level=1)
 else:
     global CLIMATE_DATA
 
