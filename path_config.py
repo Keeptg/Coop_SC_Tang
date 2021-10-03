@@ -26,3 +26,13 @@ elif hostname == 'WGJ-Group':
         if not os.path.exists(dir_):
             os.makedirs(dir_)
     run_in_cluster = False
+else:
+    root_dir = os.path.split(sys.path[0])[0]
+    data_dir = os.path.join(root_dir, 'Data')
+    working_dir = os.path.join(root_dir, 'working_dir')
+    cluster_dir = os.path.join(root_dir, 'cluster_output')
+    model_dir = os.path.join(root_dir, 'model_output')
+    for dir_ in [root_dir, data_dir, working_dir, cluster_dir, model_dir]:
+        if not os.path.exists(dir_):
+            os.makedirs(dir_)
+    run_in_cluster = False
