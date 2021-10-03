@@ -125,7 +125,7 @@ run_for_test = True
 
 # Parameters for the combined climate run
 kwargs0 = dict(climate_suffix='ctl', run_for_test=run_for_test)
-# kwargs1 = dict(climate_suffix='sce', run_for_test=run_for_test)
+kwargs1 = dict(climate_suffix='sce', run_for_test=run_for_test)
 kwargs2 = dict(climate_suffix='sce_ctl_2000-2010', run_for_test=run_for_test)
 
 kwargs_list = [kwargs0, kwargs1, kwargs2]
