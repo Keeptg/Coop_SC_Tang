@@ -121,7 +121,7 @@ def plot_for_check_the_test_result():
 
 
 global run_for_test
-run_for_test = True
+run_for_test = False
 
 # Parameters for the combined climate run
 kwargs0 = dict(climate_suffix='ctl', run_for_test=run_for_test)
