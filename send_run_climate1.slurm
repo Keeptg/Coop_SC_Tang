@@ -30,7 +30,7 @@ export OGGM_EXTRACT_DIR="/work/$SLURM_JOB_USER/$SLURM_JOB_ID/oggm_tmp"
 
 # All commands in the EOF block run inside of the container
 # Adjust container version to your needs, they are guaranteed to never change after their respective day has passed.
-srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec /home/users/lifei/images/oggm_20210910.sif bash -s <<EOF
+srun -n 1 -c "${SLURM_JOB_CPUS_PER_NODE}" singularity exec /home/users/lifei/images/oggm_20210921.sif bash -s <<EOF
   set -e
   # Setup a fake home dir inside of our workdir, so we don't clutter the actual shared homedir with potentially incompatible stuff.
   export HOME="$WORKDIR/fake_home"
