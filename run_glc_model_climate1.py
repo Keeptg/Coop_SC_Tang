@@ -123,7 +123,7 @@ def plot_for_check_the_test_result():
 
 
 global run_for_test,  do_transient_experiment, do_equilibrium_experiment, save_historical_experiment
-run_for_test = True
+run_for_test = False
 do_transient_experiment = True
 do_equilibrium_experiment = False
 save_historical_experiment = False
