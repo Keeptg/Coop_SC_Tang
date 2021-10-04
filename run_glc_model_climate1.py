@@ -1,5 +1,4 @@
 import os, pickle
-import logging
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -64,29 +63,33 @@ def run_with_job_array(climate_suffix, gdirs=None, run_for_test=False,
     temp_fpath = os.path.join(data_dir, 'Climate1_99years', 'T2mMean_'+climate_suffix+'.nc')
     execute_entity_task(gcm_climate.process_cmip_data, gdirs, filesuffix='_'+climate_suffix,
                         fpath_precip=prcp_fpath, fpath_temp=temp_fpath, year_range=('2001', '2012')) 
-    execute_entity_task(tasks.run_from_climate_data, gdirs, ys=2020, 
-                        climate_filename='gcm_data', climate_input_filesuffix='_'+climate_suffix,
-                        init_model_filesuffix='_historical', output_filesuffix=f'_transient_{climate_suffix}')
-    execute_entity_task(tasks.run_random_climate, gdirs, nyears=2000, y0=2059, halfsize=39, seed=1,
-                        climate_filename='gcm_data', climate_input_filesuffix=f'_'+climate_suffix,
-                        output_filesuffix=f'_constant_{climate_suffix}')
-    ds_t = utils.compile_run_output(gdirs, input_filesuffix=f'_transient_{climate_suffix}',
-                                    path=os.path.join(outpath, f'Transient_{climate_suffix}.nc'))
-    ds_c = utils.compile_run_output(gdirs, input_filesuffix=f'_constant_{climate_suffix}',
-                                    path=os.path.join(outpath, f'Constant_{climate_suffix}.nc'))
-    if not os.path.exists(os.path.join(outpath, 'Historical.nc')):
-        ds_h = utils.compile_run_output(gdirs, input_filesuffix='_historical',
-                                        path=os.path.join(outpath, 'Historical.nc'))
+    if do_transient_experiment:
+        execute_entity_task(tasks.run_from_climate_data, gdirs, ys=2001, 
+                            climate_filename='gcm_data', climate_input_filesuffix='_'+climate_suffix,
+                            init_model_filesuffix='_historical',
+                            output_filesuffix=f'_transient_{climate_suffix}')
+        ds_t = utils.compile_run_output(gdirs, input_filesuffix=f'_transient_{climate_suffix}',
+                                        path=os.path.join(outpath, f'Transient_{climate_suffix}.nc'))
+    if do_equilibrium_experiment:
+        execute_entity_task(tasks.run_random_climate, gdirs, nyears=2000, y0=2059, halfsize=39, seed=1,
+                            climate_filename='gcm_data', climate_input_filesuffix=f'_'+climate_suffix,
+                            output_filesuffix=f'_equilibrium_{climate_suffix}')
+        ds_e = utils.compile_run_output(gdirs, input_filesuffix=f'_equilibrium_{climate_suffix}',
+                                        path=os.path.join(outpath, f'Equilibrium_{climate_suffix}.nc'))
+    if save_historical_experiment:
+        if not os.path.exists(os.path.join(outpath, 'Historical.nc')):
+            ds_h = utils.compile_run_output(gdirs, input_filesuffix='_historical',
+                                            path=os.path.join(outpath, 'Historical.nc'))
 
 
 def plot_for_check_the_test_result():
     import matplotlib.pyplot as plt
     path = os.path.join(cluster_dir, 'cluster_output', 'Climate_1')
-    c_ctl = xr.open_dataset(os.path.join(path, 'Constant_ctl.nc'))
+    c_ctl = xr.open_dataset(os.path.join(path, 'Equilibrium_ctl.nc'))
     t_ctl = xr.open_dataset(os.path.join(path, 'Transient_ctl.nc'))
-    c_sce = xr.open_dataset(os.path.join(path, 'Constant_sce.nc'))
+    c_sce = xr.open_dataset(os.path.join(path, 'Equilibrium_sce.nc'))
     t_sce = xr.open_dataset(os.path.join(path, 'Transient_sce.nc'))
-    c_sce_ctl = xr.open_dataset(os.path.join(path, 'Constant_sce_ctl_2000-2010.nc'))
+    c_sce_ctl = xr.open_dataset(os.path.join(path, 'Equilibrium_sce_ctl_2000-2010.nc'))
     t_sce_ctl = xr.open_dataset(os.path.join(path, 'Transient_sce_ctl_2000-2010.nc'))
     c_ctl = c_ctl.sum(dim='rgi_id')
     c_sce = c_sce.sum(dim='rgi_id')
@@ -102,7 +105,6 @@ def plot_for_check_the_test_result():
     fig, ax = plt.subplots()
     ax.plot(t_ctl.time, t_ctl.volume, color='k')
     ax.plot(t_sce.time, t_sce.volume, color='b')
-    ax.plot(t_sce_ctl.time, t_sce_ctl.volume, color='r')
 
     with open(os.path.join(cfg.PATHS['working_dir'], 'gdirs.pkl'), 'rb') as f:
         gdirs = pickle.load(f)
@@ -120,8 +122,11 @@ def plot_for_check_the_test_result():
     ds_ctl_sce.prcp.values
 
 
-global run_for_test
-run_for_test = False
+global run_for_test,  do_transient_experiment, do_equilibrium_experiment, save_historical_experiment
+run_for_test = True
+do_transient_experiment = True
+do_equilibrium_experiment = False
+save_historical_experiment = False
 
 # Parameters for the combined climate run
 kwargs0 = dict(climate_suffix='ctl', run_for_test=run_for_test)
