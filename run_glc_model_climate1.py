@@ -125,15 +125,15 @@ def plot_for_check_the_test_result():
 global run_for_test,  do_transient_experiment, do_equilibrium_experiment, save_historical_experiment
 run_for_test = False
 do_transient_experiment = True
-do_equilibrium_experiment = False
+do_equilibrium_experiment = True
 save_historical_experiment = False
 
 # Parameters for the combined climate run
 kwargs0 = dict(climate_suffix='ctl', run_for_test=run_for_test)
 kwargs1 = dict(climate_suffix='sce', run_for_test=run_for_test)
-kwargs2 = dict(climate_suffix='sce_ctl_2000-2010', run_for_test=run_for_test)
+# kwargs2 = dict(climate_suffix='sce_ctl_2000-2010', run_for_test=run_for_test)
 
-kwargs_list = [kwargs0, kwargs1, kwargs2]
+kwargs_list = [kwargs0, kwargs1]
 
 if not run_in_cluster:
     gdirs = pre_process_tasks(run_for_test)
