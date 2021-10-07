@@ -64,7 +64,7 @@ def run_with_job_array(climate_suffix, gdirs=None, run_for_test=False,
     execute_entity_task(gcm_climate.process_cmip_data, gdirs, filesuffix='_'+climate_suffix,
                         fpath_precip=prcp_fpath, fpath_temp=temp_fpath, year_range=('2003', '2018')) 
     if do_transient_experiment:
-        execute_entity_task(tasks.run_from_climate_data, gdirs, ys=2001, 
+        execute_entity_task(tasks.run_from_climate_data, gdirs, ys=2003, 
                             climate_filename='gcm_data', climate_input_filesuffix='_'+climate_suffix,
                             init_model_filesuffix='_historical',
                             output_filesuffix=f'_transient_{climate_suffix}')
@@ -123,7 +123,7 @@ def plot_for_check_the_test_result():
 
 
 global run_for_test,  do_transient_experiment, do_equilibrium_experiment, save_historical_experiment
-run_for_test = False
+run_for_test = True
 do_transient_experiment = True
 do_equilibrium_experiment = False
 save_historical_experiment = False

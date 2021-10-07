@@ -176,7 +176,7 @@ def write_climate1_data():
 
 def _write_climate2_data(fname, varname, output_dir):
 
-    in_path = os.path.join(root_dir, 'Climate2_99years')
+    in_path = os.path.join(root_dir, 'Data', 'Climate2_99years')
     lon_lat = mat73.loadmat(os.path.join(in_path, 'Climate2_99years_latlon.mat'))
     lat = lon_lat['lat']
     lon = lon_lat['lon']
