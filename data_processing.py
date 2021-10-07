@@ -174,5 +174,38 @@ def write_climate1_data():
     temp_sce_ctl = xr.open_dataset(os.path.join(data_dir, 'Climate1_99years', 'T2mMean_sce_ctl_2000-2010.nc'))
 
 
+def _write_climate2_data(fname, varname, output_dir):
+
+    in_path = os.path.join(root_dir, 'Climate2_99years')
+    lon_lat = mat73.loadmat(os.path.join(in_path, 'Climate2_99years_latlon.mat'))
+    lat = lon_lat['lat']
+    lon = lon_lat['lon']
+    data = mat73.loadmat(os.path.join(in_path, fname))
+    data['lon'] = lon
+    data['lat'] = lat
+    ds = write_mat2nc(data, varname=varname, y0='1/15/2001', years=99, lon_in_dim=0, lat_in_dim=1,
+                      day_in_dim=2, year_in_dim=3, month_in_dim=None, multiple_years_data=True)
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+    if 'Precip' in varname:
+        sname = 'pr'
+    elif 'T2m' in varname:
+        sname = 'tas'
+    da = ds[sname]
+    da.attrs = ds.attrs
+    ds[sname] = da
+    ds.to_netcdf(os.path.join(output_dir, varname+'.nc'))
+    print(f"Finished {varname}.nc writing!")
+
+
+def write_climate2_data():
+    out_dir = os.path.join(data_dir, 'Climate2_99years')
+    _write_climate2_data(fname='Climate2_99years_PrecipMean_ctl.mat', varname='PrecipMean_ctl', output_dir=out_dir)
+    _write_climate2_data(fname='Climate2_99years_PrecipMean_sce.mat', varname='PrecipMean_sce', output_dir=out_dir)
+    _write_climate2_data(fname='Climate2_99years_T2mMean_ctl.mat', varname='T2mMean_ctl', output_dir=out_dir)
+    _write_climate2_data(fname='Climate2_99years_T2mMean_sce.mat', varname='T2mMean_sce', output_dir=out_dir)
+
+
 if __name__ == "__main__":
-    write_climate1_data()
+    #write_climate1_data()
+    write_climate2_data()
